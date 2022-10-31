@@ -11,6 +11,8 @@
 [Automated detection and annotation of term definitions in German text corpora](http://www.lrec-conf.org/proceedings/lrec2006/pdf/128_pdf.pdf) - possibly has a German definition dataset
 [Weakly Supervised Definition Extraction](https://aclanthology.org/R15-1025.pdf) - presents a W00 dataset
 
+https://hal.archives-ouvertes.fr/hal-01798704/ (Huge dataset with german words definitions)
+
 # Approaches
   - fine-tune a language model (at inference, first fine-tune the model on the large corpus available)
   - definition labeling
@@ -30,3 +32,7 @@
   - a large crawled dataset of the .uk domain name
   - W00
   - [DEFT corpus](https://github.com/adobe-research/deft_corpus)
+
+# Things to check
+
+Geyken, A., Barbaresi, A., Didakowski, J., Jurish, B., Wiegand, F., and Lemnitzer, L. (2017a). Die Kor- pusplattform des ”Digitalen Wo ̈rterbuchs der deutschen Sprache” (DWDS). Zeitschrift fu ̈r germanistische Lin- guistik, 45(2):327–344.
