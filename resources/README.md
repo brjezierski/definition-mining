@@ -34,7 +34,7 @@ corpus](https://arxiv.org/pdf/2008.13694.pdf)
 
 [Best performing model for subtask 1 of the DEFT Eval competition](https://www.researchgate.net/publication/355429534_Gorynych_Transformer_at_SemEval-2020_Task_6_Multi-task_Learning_for_Definition_Extraction)
 
-[Huge dataset with german words definitions](https://hal.archives-ouvertes.fr/hal-01798704/)
+[Huge dataset with german words definitions](https://hal.archives-ouvertes.fr/hal-01798704/) - a specialized web corpus, that is a collection of web documents targeting web pages which are defined in advance; TODO: request access
 
 # Metrices 
 - Precision
