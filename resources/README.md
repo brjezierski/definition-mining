@@ -36,6 +36,8 @@ corpus](https://arxiv.org/pdf/2008.13694.pdf)
 
 [Huge dataset with german words definitions](https://hal.archives-ouvertes.fr/hal-01798704/) - a specialized web corpus, that is a collection of web documents targeting web pages which are defined in advance; TODO: request access
 
+https://hal.archives-ouvertes.fr/hal-01575661/document (in german)
+
 # Metrices 
 - Precision
 - Recall
@@ -67,3 +69,4 @@ corpus](https://arxiv.org/pdf/2008.13694.pdf)
 # Things to check
 
 Geyken, A., Barbaresi, A., Didakowski, J., Jurish, B., Wiegand, F., and Lemnitzer, L. (2017a). Die Kor- pusplattform des ”Digitalen Wo ̈rterbuchs der deutschen Sprache” (DWDS). Zeitschrift fu ̈r germanistische Lin- guistik, 45(2):327–344.
+
