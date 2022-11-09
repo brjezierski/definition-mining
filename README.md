@@ -19,17 +19,20 @@ source ~/miniforge3/bin/activate
 5. ```cd``` into the definition-mining repo and run
 ```
 conda env create -f environment.yml
-conda activate ap_env
+conda activate dm_env
 ```
 
-6. Verify PyTorch and transformers installation. Open a Python interpreter and type 
+6. Install PyTorch using pip
+```
+pip3 install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+```
+
+7. Verify PyTorch and transformers installation. Open a Python interpreter and type 
 ```
 import torch
 torch.has_mps # should be True
 import transformers
 ```
-
-7. TODO: verify if the M1 GPU is actually used.
 
 # Testing deft-eval-2020 implementation
 
