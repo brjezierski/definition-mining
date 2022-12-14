@@ -1,0 +1,7 @@
+/deft_corpus
+/task2
+/deft-eval-sol/tensorboard
+/deft-eval-sol/data/*
+/data/glanos
+**/.DS_Store
+/deft-eval-sol/utils/__pycache__/*
