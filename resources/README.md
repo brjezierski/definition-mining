@@ -33,10 +33,22 @@ corpus](https://arxiv.org/pdf/2008.13694.pdf)
 [DeftEval corpus description](https://aclanthology.org/W19-4015.pdf)
 
 [Best performing model for subtask 1 of the DEFT Eval competition](https://www.researchgate.net/publication/355429534_Gorynych_Transformer_at_SemEval-2020_Task_6_Multi-task_Learning_for_Definition_Extraction)
+  - small windows of 3-5 sentences each
+  - During training, the weighted sum of cross-entropies of each subtask was optimized
+  - Prediction selection: in the first task, we selected the answer with the maximum score, for the second task for each word we took the answer from the example in which the score was maximum for this word, for now ignore the third task
 
 [Huge dataset with german words definitions](https://hal.archives-ouvertes.fr/hal-01798704/) - a specialized web corpus, that is a collection of web documents targeting web pages which are defined in advance; TODO: request access
 
-https://hal.archives-ouvertes.fr/hal-01575661/document (in german)
+[DWDS Kerncorpus](https://hal.archives-ouvertes.fr/hal-01575661/document)
+  - Prose, verse and drama (26 per cent of the DWDS Kerncorpus)
+  - Newspapers (27 per cent)
+  - Science (22 per cent)
+  - Other nonfiction (20 per cent)
+  - Definition relevant:
+    - Worterbuch der deutschen Gegenwartssprache
+     - Duden Großworterbuch der deutschen Sprache
+
+[Collection of rules for extracting definitions in German (Cramer, 2011)](https://eldorado.tu-dortmund.de/bitstream/2003/27628/1/Dissertation.pdf)
 
 # Metrices 
 - Precision
