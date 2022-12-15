@@ -1,7 +1,8 @@
-from transformers.modeling_xlnet import (
-    XLNetPreTrainedModel, XLNetModel, SequenceSummary
+from transformers import (
+    XLNetPreTrainedModel, XLNetModel
 )
-from transformers.configuration_xlnet import XLNetConfig
+from transformers.modeling_utils import SequenceSummary
+from transformers import XLNetConfig
 from torch import nn
 from torch.nn import CrossEntropyLoss
 import torch

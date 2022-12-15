@@ -55,12 +55,14 @@ def compute_all_metrics(
     relations_sequence_labels, relations_sequence_preds,
     label2id, loss_info=None, logger=None
 ):
+    # MOD
+    # print("label2id['relations_sequence']", label2id['relations_sequence'])
     eval_tags_sequence_labels = [
         (label2id['tags_sequence'][lab]) for lab in EVAL_TAGS
     ]
-    eval_relations_sequence_labels = [
-        (label2id['relations_sequence'][lab]) for lab in EVAL_RELATIONS
-    ]
+    # eval_relations_sequence_labels = [
+    #     (label2id['relations_sequence'][lab]) for lab in EVAL_RELATIONS
+    # ]
 
     task_1_report = classification_report(
         sent_type_labels, sent_type_preds, labels=[0, 1], output_dict=True
@@ -69,10 +71,10 @@ def compute_all_metrics(
         tags_sequence_labels, tags_sequence_preds,
         labels=eval_tags_sequence_labels, output_dict=True
     )
-    task_3_report = classification_report(
-        relations_sequence_labels, relations_sequence_preds,
-        labels=eval_relations_sequence_labels, output_dict=True
-    )
+    # task_3_report = classification_report(
+    #     relations_sequence_labels, relations_sequence_preds,
+    #     labels=eval_relations_sequence_labels, output_dict=True
+    # )
 
     result = {}
     for x in ['0', '1', 'weighted avg', 'macro avg']:
@@ -90,15 +92,15 @@ def compute_all_metrics(
             result[f"tags_sequence_{id2label[x]}_{metrics}"] = \
                 round(task_2_report[str(x)][metrics], 6)
 
-    id2label = {
-        val: key for key, val in label2id['relations_sequence'].items()
-    }
-    id2label['weighted avg'] = 'weighted-avg'
-    id2label['macro avg'] = 'macro-avg'
-    for x in eval_relations_sequence_labels + ['weighted avg', 'macro avg']:
-        for metrics in ['precision', 'recall', 'f1-score', 'support']:
-            result[f"relations_sequence_{id2label[x]}_{metrics}"] = \
-                round(task_3_report[str(x)][metrics], 6)
+    # id2label = {
+    #     val: key for key, val in label2id['relations_sequence'].items()
+    # }
+    # id2label['weighted avg'] = 'weighted-avg'
+    # id2label['macro avg'] = 'macro-avg'
+    # for x in eval_relations_sequence_labels + ['weighted avg', 'macro avg']:
+    #     for metrics in ['precision', 'recall', 'f1-score', 'support']:
+    #         result[f"relations_sequence_{id2label[x]}_{metrics}"] = \
+    #             round(task_3_report[str(x)][metrics], 6)
     if logger is not None:
         logger.info("=====================================")
         for key in sorted(result.keys()):
@@ -281,8 +283,9 @@ def main(args):
             dest_tmp_model_path = args.output_dir
 
     device = torch.device(
-        "cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-    n_gpu = torch.cuda.device_count()
+        "cuda" if torch.cuda.is_available() and not args.no_cuda else ("mps" if torch.has_mps else "cpu"))
+    n_gpu = 1 if torch.has_mps else torch.cuda.device_count()
+
 
     if args.gradient_accumulation_steps < 1:
         raise ValueError(
@@ -581,6 +584,7 @@ def main(args):
             nb_tr_steps = 0
             cur_train_loss = defaultdict(float)
 
+            # TRAINING HERE
             model.train()
             logger.info("Start epoch #{} (lr = {})...".format(epoch, lr))
             if args.train_mode == 'random' or args.train_mode == 'random_sorted':
@@ -696,6 +700,8 @@ def main(args):
                             )
                             predict_for_metrics.append(eval_metric)
 
+                    # MOD
+                    print('predict_for_metrics', predict_for_metrics)
                     for metric_id, eval_metric in tqdm(
                         enumerate(predict_for_metrics), total=len(predict_for_metrics),
                         desc='writing predictions ... '
@@ -741,6 +747,13 @@ def main(args):
                             metrics=test_result
                         )
 
+            output_model_file = os.path.join(
+                args.output_dir,
+                f"best_model"
+            )
+            save_model(
+                args, model, tokenizer, output_model_file
+            )
 
             if args.log_train_metrics:
                 preds, result, scores = evaluate(
@@ -884,39 +897,40 @@ def write_predictions(
             for sent in aggregated_results['tags_sequence_scores']
         ],
         'tags_ids': [
-            ' '.join(ex.tags_ids) for ex in examples
+            str(ex.tags_ids) for ex in examples
+            # ' '.join(ex.tags_ids) for ex in examples
         ],
-        'relations_sequence_labels': [
-            ' '.join(ex.relations_sequence) for ex in examples
-        ],
-        'relations_sequence_pred': [
-            ' '.join([id2label['relations_sequence'][x] if x != 0 else '0' for x in sent])
-            for sent in aggregated_results['relations_sequence']
-        ],
-        'relations_sequence_scores': [
-            ' '.join([str(score) for score in sent])
-            for sent in aggregated_results['relations_sequence_scores']
-        ],
-        'subj_start': [
-            ex.subj_start for ex in examples
-        ],
-        'subj_end': [
-            ex.subj_end for ex in examples
-        ],
-        'infile_offsets': [
-            ' '.join([
-                str(offset) for offset in ex.infile_offsets
-            ]) for ex in examples
-        ],
-        'start_char': [
-            ' '.join(ex.start_char) for ex in examples
-        ],
-        'end_char': [
-            ' '.join(ex.end_char) for ex in examples
-        ],
-        'source': [
-            ex.source for ex in examples
-        ]
+        # 'relations_sequence_labels': [
+        #     ' '.join(ex.relations_sequence) for ex in examples
+        # ],
+        # 'relations_sequence_pred': [
+        #     ' '.join([id2label['relations_sequence'][x] if x != 0 else '0' for x in sent])
+        #     for sent in aggregated_results['relations_sequence']
+        # ],
+        # 'relations_sequence_scores': [
+        #     ' '.join([str(score) for score in sent])
+        #     for sent in aggregated_results['relations_sequence_scores']
+        # ],
+        # 'subj_start': [
+        #     ex.subj_start for ex in examples
+        # ],
+        # 'subj_end': [
+        #     ex.subj_end for ex in examples
+        # ],
+        # 'infile_offsets': [
+        #     ' '.join([
+        #         str(offset) for offset in ex.infile_offsets
+        #     ]) for ex in examples
+        # ],
+        # 'start_char': [
+        #     ' '.join(ex.start_char) for ex in examples
+        # ],
+        # 'end_char': [
+        #     ' '.join(ex.end_char) for ex in examples
+        # ],
+        # 'source': [
+        #     ex.source for ex in examples
+        # ]
     }
 
     prediction_results = pd.DataFrame(prediction_results)

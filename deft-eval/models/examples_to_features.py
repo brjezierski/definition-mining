@@ -1,13 +1,15 @@
-from transformers.tokenization_bert import BertTokenizer
-from transformers.tokenization_xlnet import XLNetTokenizer
-from transformers.configuration_bert import BertConfig
-from transformers.configuration_roberta import RobertaConfig
-from transformers.tokenization_roberta import RobertaTokenizer
+# from transformers.models.bert.tokenization_bert import BasicTokenizer
+# from transformers.tokenization_bert import BertTokenizer
+from transformers import XLNetTokenizer
+# from transformers.tokenization_xlnet import XLNetTokenizer
+from transformers import BertConfig, BertTokenizer
+from transformers import RobertaConfig
+from transformers import RobertaTokenizer
 from torch.utils.data import DataLoader, TensorDataset
 from .multitask_bert import BertForMultitaskLearning
 from .multitask_roberta import RobertaForMultitaskLearning
 from .multitask_xlnet import XLNetForMultiLearning
-from transformers.configuration_xlnet import XLNetConfig
+from transformers import XLNetConfig
 import torch
 import os
 import json

@@ -1,5 +1,5 @@
-from transformers.modeling_bert import BertPreTrainedModel, BertModel
-from transformers.tokenization_bert import BertTokenizer
+from transformers import BertPreTrainedModel, BertModel
+from transformers import BertTokenizer
 from torch import nn
 from torch.nn import CrossEntropyLoss
 import torch
