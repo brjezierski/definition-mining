@@ -60,9 +60,9 @@ def compute_all_metrics(
     eval_tags_sequence_labels = [
         (label2id['tags_sequence'][lab]) for lab in EVAL_TAGS
     ]
-    # eval_relations_sequence_labels = [
-    #     (label2id['relations_sequence'][lab]) for lab in EVAL_RELATIONS
-    # ]
+    eval_relations_sequence_labels = [
+        (label2id['relations_sequence'][lab]) for lab in EVAL_RELATIONS
+    ]
 
     task_1_report = classification_report(
         sent_type_labels, sent_type_preds, labels=[0, 1], output_dict=True
@@ -897,40 +897,40 @@ def write_predictions(
             for sent in aggregated_results['tags_sequence_scores']
         ],
         'tags_ids': [
-            str(ex.tags_ids) for ex in examples
-            # ' '.join(ex.tags_ids) for ex in examples
+            # str(ex.tags_ids) for ex in examples
+            ' '.join(ex.tags_ids) for ex in examples
         ],
-        # 'relations_sequence_labels': [
-        #     ' '.join(ex.relations_sequence) for ex in examples
-        # ],
-        # 'relations_sequence_pred': [
-        #     ' '.join([id2label['relations_sequence'][x] if x != 0 else '0' for x in sent])
-        #     for sent in aggregated_results['relations_sequence']
-        # ],
-        # 'relations_sequence_scores': [
-        #     ' '.join([str(score) for score in sent])
-        #     for sent in aggregated_results['relations_sequence_scores']
-        # ],
-        # 'subj_start': [
-        #     ex.subj_start for ex in examples
-        # ],
-        # 'subj_end': [
-        #     ex.subj_end for ex in examples
-        # ],
-        # 'infile_offsets': [
-        #     ' '.join([
-        #         str(offset) for offset in ex.infile_offsets
-        #     ]) for ex in examples
-        # ],
-        # 'start_char': [
-        #     ' '.join(ex.start_char) for ex in examples
-        # ],
-        # 'end_char': [
-        #     ' '.join(ex.end_char) for ex in examples
-        # ],
-        # 'source': [
-        #     ex.source for ex in examples
-        # ]
+        'relations_sequence_labels': [
+            ' '.join(ex.relations_sequence) for ex in examples
+        ],
+        'relations_sequence_pred': [
+            ' '.join([id2label['relations_sequence'][x] if x != 0 else '0' for x in sent])
+            for sent in aggregated_results['relations_sequence']
+        ],
+        'relations_sequence_scores': [
+            ' '.join([str(score) for score in sent])
+            for sent in aggregated_results['relations_sequence_scores']
+        ],
+        'subj_start': [
+            ex.subj_start for ex in examples
+        ],
+        'subj_end': [
+            ex.subj_end for ex in examples
+        ],
+        'infile_offsets': [
+            ' '.join([
+                str(offset) for offset in ex.infile_offsets
+            ]) for ex in examples
+        ],
+        'start_char': [
+            ' '.join(ex.start_char) for ex in examples
+        ],
+        'end_char': [
+            ' '.join(ex.end_char) for ex in examples
+        ],
+        'source': [
+            ex.source for ex in examples
+        ]
     }
 
     prediction_results = pd.DataFrame(prediction_results)
@@ -984,7 +984,7 @@ if __name__ == "__main__":
         default="+".join([
             "sent_type_1_f1-score",
             "tags_sequence_macro-avg_f1-score",
-            "relations_sequence_macro-avg_f1-score"
+            # "relations_sequence_macro-avg_f1-score"
         ]),
         type=str
     )
