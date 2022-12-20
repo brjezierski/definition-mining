@@ -1,7 +1,11 @@
 /deft_corpus
 /task2
-/deft-eval-sol/tensorboard
-/deft-eval-sol/data/*
+/deft-eval/tensorboard
+/deft-eval/data/*
 /data/glanos
 **/.DS_Store
-/deft-eval-sol/utils/__pycache__/*
+/deft-eval/__pycache__/*
+/deft-eval/utils/__pycache__/*
+/deft-eval/models/__pycache__/*
+/deft-eval/training/1*
+/deft-eval/training/2*
