@@ -259,7 +259,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
         assert sequence_mode in ['all', 'not-all']
         num_tokens = 0
         num_fit_examples = 0
-        num_shown_examples = 0
         features = []
         neg_tags_sequence_label = 'O'
         neg_relations_sequence_label = '0'
@@ -319,75 +318,75 @@ class BertForMultitaskLearning(BertPreTrainedModel):
                 if sequence_mode == 'all':
                     raise NotImplementedError
                 elif sequence_mode == 'not-all':
-                    if context_mode == 'center' and (i > example.sent_end or i < example.sent_start):
-                        if i == example.subj_start:
-                            out_of_context_subj = True
-                        offset -= 1
-                        continue
-                    if context_mode == 'left' and i > example.sent_end:
-                        if i == example.subj_start:
-                            out_of_context_subj = True
-                        offset -= 1
-                        continue
-                    if context_mode == 'right' and i < example.sent_start:
-                        if i == example.subj_start:
-                            out_of_context_subj = True
-                        offset -= 1
-                        continue
+                    # if context_mode == 'center' and (i > example.sent_end or i < example.sent_start):
+                    #     if i == example.subj_start:
+                    #         out_of_context_subj = True
+                    #     offset -= 1
+                    #     continue
+                    # if context_mode == 'left' and i > example.sent_end:
+                    #     if i == example.subj_start:
+                    #         out_of_context_subj = True
+                    #     offset -= 1
+                    #     continue
+                    # if context_mode == 'right' and i < example.sent_start:
+                    #     if i == example.subj_start:
+                    #         out_of_context_subj = True
+                    #     offset -= 1
+                    #     continue
 
-                    if i == example.sent_start:
-                        update_example_data(
-                            token=[SENTENCE_START],
-                            tags_sequence_label=[neg_tags_sequence_label],
-                            relations_sequence_label=[
-                                neg_relations_sequence_label
-                            ],
-                            mask=[1],
-                            offset_step=1,
-                            token_valid_pos_id=[offset + i],
-                            orig_position=[]
-                        )
-                    if i == example.subj_start:
-                        update_example_data(
-                            token=[SUBJECT_START],
-                            tags_sequence_label=[neg_tags_sequence_label],
-                            relations_sequence_label=[
-                                neg_relations_sequence_label
-                            ],
-                            mask=[1],
-                            offset_step=1,
-                            token_valid_pos_id=[offset + i],
-                            orig_position=[]
-                        )
+                    # if i == example.sent_start:
+                    #     update_example_data(
+                    #         token=[SENTENCE_START],
+                    #         tags_sequence_label=[neg_tags_sequence_label],
+                    #         relations_sequence_label=[
+                    #             neg_relations_sequence_label
+                    #         ],
+                    #         mask=[1],
+                    #         offset_step=1,
+                    #         token_valid_pos_id=[offset + i],
+                    #         orig_position=[]
+                    #     )
+                    # if i == example.subj_start:
+                    #     update_example_data(
+                    #         token=[SUBJECT_START],
+                    #         tags_sequence_label=[neg_tags_sequence_label],
+                    #         relations_sequence_label=[
+                    #             neg_relations_sequence_label
+                    #         ],
+                    #         mask=[1],
+                    #         offset_step=1,
+                    #         token_valid_pos_id=[offset + i],
+                    #         orig_position=[]
+                    #     )
                     if offset + i < max_seq_length:
                         orig_positions_map.append(offset + i)
                     token_valid_pos_ids += [offset + i] * num_sub_tokens
                     tags_sequence_labels.append(tags_sequence_label)
                     relations_sequence_labels.append(relations_sequence_label)
-                    if i == example.subj_end:
-                        update_example_data(
-                            token=[SUBJECT_END],
-                            tags_sequence_label=[neg_tags_sequence_label],
-                            relations_sequence_label=[
-                                neg_relations_sequence_label
-                            ],
-                            mask=[1],
-                            offset_step=1,
-                            token_valid_pos_id=[offset + i + 1],
-                            orig_position=[]
-                        )
-                    if i == example.sent_end:
-                        update_example_data(
-                            token=[SENTENCE_END],
-                            tags_sequence_label=[neg_tags_sequence_label],
-                            relations_sequence_label=[
-                                neg_relations_sequence_label
-                            ],
-                            mask=[1],
-                            offset_step=1,
-                            token_valid_pos_id=[offset + i + 1],
-                            orig_position=[]
-                        )
+                    # if i == example.subj_end:
+                    #     update_example_data(
+                    #         token=[SUBJECT_END],
+                    #         tags_sequence_label=[neg_tags_sequence_label],
+                    #         relations_sequence_label=[
+                    #             neg_relations_sequence_label
+                    #         ],
+                    #         mask=[1],
+                    #         offset_step=1,
+                    #         token_valid_pos_id=[offset + i + 1],
+                    #         orig_position=[]
+                    #     )
+                    # if i == example.sent_end:
+                    #     update_example_data(
+                    #         token=[SENTENCE_END],
+                    #         tags_sequence_label=[neg_tags_sequence_label],
+                    #         relations_sequence_label=[
+                    #             neg_relations_sequence_label
+                    #         ],
+                    #         mask=[1],
+                    #         offset_step=1,
+                    #         token_valid_pos_id=[offset + i + 1],
+                    #         orig_position=[]
+                    #     )
                 else:
                     raise ValueError(
                         f'sequence_mode: expected either all or not-all'
@@ -468,37 +467,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
             assert len(relations_sequence_ids) == max_seq_length
             assert len(token_valid_pos_ids) == max_seq_length
 
-            if num_shown_examples < 20:
-                if (ex_index < 5) or (sent_type_id > 0):
-                    num_shown_examples += 1
-                    logger.info("*** Example ***")
-                    logger.info("guid: %s" % example.guid)
-                    logger.info("tokens: %s" % " ".join(
-                        [str(x) for x in tokens]))
-                    logger.info("orig_positions_map: %s" % " ".join(
-                        [str(x) for x in orig_positions_map]
-                    ))
-                    logger.info("input_ids: %s" % " ".join(
-                        [str(x) for x in input_ids]
-                    ))
-                    logger.info("sent_type: %s (id = %d)" % (
-                        example.sent_type, sent_type_id
-                    ))
-                    logger.info("token_valid_pos_ids: %s" % " ".join(
-                        [str(x) for x in token_valid_pos_ids]
-                    ))
-                    logger.info("tags_sequence_ids: %s" % " ".join(
-                        [str(x) for x in tags_sequence_ids]
-                    ))
-                    logger.info("relations_sequence_ids: %s" % " ".join(
-                        [str(x) for x in relations_sequence_ids]
-                    ))
-                    logger.info("input_mask: %s" % " ".join(
-                        [str(x) for x in input_mask]
-                    ))
-                    logger.info("segment_ids: %s" % " ".join(
-                        [str(x) for x in segment_ids]
-                    ))
 
             features.append(
                 InputFeatures(

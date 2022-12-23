@@ -20,35 +20,35 @@ class InputExample(object):
 
     def __init__(
         self,
-        guid: str,
+        # guid: str,
         tokens: list,
         sent_type: str,
         tags_sequence: list,
         relations_sequence: list,
         tags_ids: list,
-        sent_start: int,
-        sent_end: int,
-        subj_start: int,
-        subj_end: int,
-        start_char: int,
-        end_char: int,
-        source: str,
-        infile_offsets: list
+        # sent_start: int,
+        # sent_end: int,
+        # subj_start: int,
+        # subj_end: int,
+        # start_char: int,
+        # end_char: int,
+        # source: str,
+        # infile_offsets: list
     ):
-        self.guid = guid
+        # self.guid = guid
         self.tokens = tokens
         self.sent_type = sent_type
         self.tags_sequence = tags_sequence
         self.relations_sequence = relations_sequence
         self.tags_ids = tags_ids
-        self.sent_start = sent_start
-        self.sent_end = sent_end
-        self.subj_start = subj_start
-        self.subj_end = subj_end
-        self.start_char = start_char
-        self.end_char = end_char
-        self.source = source
-        self.infile_offsets = infile_offsets
+        # self.sent_start = sent_start
+        # self.sent_end = sent_end
+        # self.subj_start = subj_start
+        # self.subj_end = subj_end
+        # self.start_char = start_char
+        # self.end_char = end_char
+        # self.source = source
+        # self.infile_offsets = infile_offsets
 
 
 class DataProcessor(object):
@@ -151,20 +151,20 @@ class DataProcessor(object):
         for example in dataset:
             examples.append(
                 InputExample(
-                    guid=f"{set_type}-{example['idx']}",
+                    # guid=f"{set_type}-{example['idx']}",
                     tokens=example["tokens"],
                     sent_type=example["sent_type"],
                     tags_sequence=example["tags_sequence"],
                     relations_sequence=example["relations_sequence"],
                     tags_ids=example["tags_ids"],
-                    sent_start=example["sent_start"],
-                    sent_end=example["sent_end"],
-                    subj_start=example["subj_start"],
-                    subj_end=example["subj_end"],
-                    start_char=example["start_char"],
-                    end_char=example["end_char"],
-                    source=example["source"],
-                    infile_offsets=example["infile_offsets"]
+                    # sent_start=example["sent_start"],
+                    # sent_end=example["sent_end"],
+                    # subj_start=example["subj_start"],
+                    # subj_end=example["subj_end"],
+                    # start_char=example["start_char"],
+                    # end_char=example["end_char"],
+                    # source=example["source"],
+                    # infile_offsets=example["infile_offsets"]
                 )
             )
         return examples

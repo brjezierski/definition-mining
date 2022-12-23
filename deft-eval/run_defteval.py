@@ -25,7 +25,7 @@ from transformers.file_utils import (
 )
 
 from tqdm import tqdm
-from models.examples_to_features import (
+from models.examples_to_features_working_version import (
     get_dataloader_and_tensors,
     models, tokenizers, DataProcessor, configs
 )
@@ -71,10 +71,10 @@ def compute_all_metrics(
         tags_sequence_labels, tags_sequence_preds,
         labels=eval_tags_sequence_labels, output_dict=True
     )
-    # task_3_report = classification_report(
-    #     relations_sequence_labels, relations_sequence_preds,
-    #     labels=eval_relations_sequence_labels, output_dict=True
-    # )
+    task_3_report = classification_report(
+        relations_sequence_labels, relations_sequence_preds,
+        labels=eval_relations_sequence_labels, output_dict=True
+    )
 
     result = {}
     for x in ['0', '1', 'weighted avg', 'macro avg']:
@@ -92,15 +92,15 @@ def compute_all_metrics(
             result[f"tags_sequence_{id2label[x]}_{metrics}"] = \
                 round(task_2_report[str(x)][metrics], 6)
 
-    # id2label = {
-    #     val: key for key, val in label2id['relations_sequence'].items()
-    # }
-    # id2label['weighted avg'] = 'weighted-avg'
-    # id2label['macro avg'] = 'macro-avg'
-    # for x in eval_relations_sequence_labels + ['weighted avg', 'macro avg']:
-    #     for metrics in ['precision', 'recall', 'f1-score', 'support']:
-    #         result[f"relations_sequence_{id2label[x]}_{metrics}"] = \
-    #             round(task_3_report[str(x)][metrics], 6)
+    id2label = {
+        val: key for key, val in label2id['relations_sequence'].items()
+    }
+    id2label['weighted avg'] = 'weighted-avg'
+    id2label['macro avg'] = 'macro-avg'
+    for x in eval_relations_sequence_labels + ['weighted avg', 'macro avg']:
+        for metrics in ['precision', 'recall', 'f1-score', 'support']:
+            result[f"relations_sequence_{id2label[x]}_{metrics}"] = \
+                round(task_3_report[str(x)][metrics], 6)
     if logger is not None:
         logger.info("=====================================")
         for key in sorted(result.keys()):
@@ -864,9 +864,9 @@ def write_predictions(
         ]
 
     prediction_results = {
-        'idx': [
-            ex.guid for ex in examples
-        ],
+        # 'idx': [
+        #     ex.guid for ex in examples
+        # ],
         'tokens': [
              ' '.join(ex.tokens) for ex in examples
         ],
@@ -878,12 +878,6 @@ def write_predictions(
         ],
         'sent_type_scores': [
             str(score) for score in scores['sent_type']
-        ],
-        'sent_start': [
-            ex.sent_start for ex in examples
-        ],
-        'sent_end': [
-            ex.sent_end for ex in examples
         ],
         'tags_sequence_labels': [
             ' '.join(ex.tags_sequence) for ex in examples
@@ -897,7 +891,6 @@ def write_predictions(
             for sent in aggregated_results['tags_sequence_scores']
         ],
         'tags_ids': [
-            # str(ex.tags_ids) for ex in examples
             ' '.join(ex.tags_ids) for ex in examples
         ],
         'relations_sequence_labels': [
@@ -911,26 +904,6 @@ def write_predictions(
             ' '.join([str(score) for score in sent])
             for sent in aggregated_results['relations_sequence_scores']
         ],
-        'subj_start': [
-            ex.subj_start for ex in examples
-        ],
-        'subj_end': [
-            ex.subj_end for ex in examples
-        ],
-        'infile_offsets': [
-            ' '.join([
-                str(offset) for offset in ex.infile_offsets
-            ]) for ex in examples
-        ],
-        'start_char': [
-            ' '.join(ex.start_char) for ex in examples
-        ],
-        'end_char': [
-            ' '.join(ex.end_char) for ex in examples
-        ],
-        'source': [
-            ex.source for ex in examples
-        ]
     }
 
     prediction_results = pd.DataFrame(prediction_results)
@@ -984,7 +957,7 @@ if __name__ == "__main__":
         default="+".join([
             "sent_type_1_f1-score",
             "tags_sequence_macro-avg_f1-score",
-            # "relations_sequence_macro-avg_f1-score"
+            "relations_sequence_macro-avg_f1-score"
         ]),
         type=str
     )
