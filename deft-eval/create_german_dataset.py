@@ -1,19 +1,13 @@
+import argparse
 from collections import defaultdict, Counter
 import os
 from itertools import groupby
 import string
-# from flair.data import Sentence
-# from flair.embeddings import WordEmbeddings, FlairEmbeddings, StackedEmbeddings
 import torch
 import nltk
 from nltk.tokenize import word_tokenize
-# import tensorflow_hub as hub
 import numpy as np
-# import tensorflow_text
 import pandas as pd
-# import tensorflow as tf
-# from flair.models import MultiTagger
-# import flair
 from tqdm import tqdm
 from sentence_aligner import SentenceAligner
 import spacy
@@ -54,6 +48,7 @@ EVAL_TAGS = [
     'B-Referential-Term', 'I-Referential-Term', 'B-Qualifier', 'I-Qualifier'
 ]
 
+tag_ids = {'O': '-1', 'B-Definition': 'T127', 'I-Definition': 'T127', 'B-Term': 'T128', 'I-Term': 'T128', 'B-Alias-Term': 'T137', 'I-Alias-Term': 'T137', 'B-Secondary-Definition': 'T138', 'I-Secondary-Definition': 'T138', 'B-Ordered-Term': 'T144', 'I-Ordered-Term': 'T144', 'B-Ordered-Definition': 'T145', 'I-Ordered-Definition': 'T145', 'B-Referential-Definition': 'T153', 'I-Referential-Definition': 'T194', 'B-Qualifier': 'T35', 'I-Qualifier': 'T35', 'B-Referential-Term': 'T124', 'B-Definition-frag': 'T246-frag', 'I-Definition-frag': 'T246-frag', 'I-Referential-Term': 'T37', 'B-Term-frag': 'T298-frag', 'B-Alias-Term-frag': 'T219-frag', 'I-Term-frag': 'T61-frag'}
 
 def cstr(s, color=bcolors.Default):
    return f"{color}{s}{color}"
@@ -90,6 +85,14 @@ def display_tagged_sent(sent, tags):
   return " ".join(tagged_sent)
 
 
+def get_tag_id_dict(df):
+    tag_dict = {}
+    for index, row in df.iterrows():
+       for tag, id in zip(row['tags_sequence'], row['tags_ids']):
+          if tag not in tag_dict:
+             tag_dict[tag] = id
+    return get_tag_id_dict
+      
 def align_words(en_raw, de_raw, en_relations_sequence, label, ind, to_print=False):
 #   print(en_relations_sequence)
   relation_tags = list(filter(lambda relation: relation.startswith("B-"), en_relations_sequence))
@@ -163,6 +166,22 @@ def align_words(en_raw, de_raw, en_relations_sequence, label, ind, to_print=Fals
     # print('after',de_relations_sequence)
 
   return de_relations_sequence
+
+
+def assign_zero_relations(tags):
+  return ["0"] * len(tags)
+
+
+def assign_tag_ids(tags):
+  assigned_tag_ids = []
+  # Forth iteration to add tag ids
+  for tag in tags:
+    if tag in tag_ids:
+       assigned_tag_ids.append(tag_ids[tag])
+    else:
+      print(f'ERROR! Skipping tag {tag} does not have an id assigned')
+      return np.nan
+  return assigned_tag_ids
 
 
 def read_task_2(
@@ -268,7 +287,7 @@ def load_de_translation(corpus, de_corpus_repo: str = '../data/de'):
    return dataset
 
 
-def create_dataset(corpus, deft_corpus_repo: str = 'deft_corpus'):
+def create_dataset(corpus, target_dir, deft_corpus_repo: str = 'deft_corpus', lang="bilingual"):
     task_2_dir=f'../{deft_corpus_repo}/local_data/task_2/{corpus}'
     part = read_task_2(
             data_dir=task_2_dir
@@ -285,32 +304,61 @@ def create_dataset(corpus, deft_corpus_repo: str = 'deft_corpus'):
             del part[column]
 
     dataset_en = pd.DataFrame(part)
-    dataset_en['Text'] = dataset_en['tokens'].apply(' '.join)
-    dataset_en = dataset_en.drop_duplicates(subset=['Text'])
-    dataset_de = load_de_translation(corpus)
-    print(f'Processing {len(dataset_de)} rows of German translations')
+    if lang == "en":
+        print("English only")
+        dataset_en = dataset_en.rename(columns={"tag": "tags_sequence"}, errors="raise")
+        dataset_en["tags_ids"] = dataset_en.apply(lambda row: assign_tag_ids(row['tags_sequence']), axis=1)
+        dataset_en["relations_sequence"] = dataset_en.apply(lambda row: assign_zero_relations(row['tags_sequence']), axis=1)
+        dataset_en = dataset_en.drop_duplicates(subset=['tokens'])
+        dataset_en.to_json(f'{target_dir}/{corpus}.json', orient='records')
+        return dataset_en
+    elif lang == "de" or lang == "bilingual":
+        dataset_en['Text'] = dataset_en['tokens'].apply(' '.join)
+        dataset_en = dataset_en.drop_duplicates(subset=['Text'])
+        dataset_de = load_de_translation(corpus)
+        print(f'Processing {len(dataset_de)} rows of German translations')
 
-    bilingual_dataset = pd.merge(dataset_de, dataset_en, left_on='Text', right_on='Text', how='left')
-    bilingual_dataset.dropna(inplace=True)
-    bilingual_dataset = bilingual_dataset.rename(columns={"Text": "text_en", "Translation": "text_de", "tokens": "tokens_en", "tag": "tags_en", 'Label': "sent_type"}, errors="raise")
-    # bilingual_dataset["tags_de"] = ""
+        bilingual_dataset = pd.merge(dataset_de, dataset_en, left_on='Text', right_on='Text', how='left')
+        bilingual_dataset.dropna(inplace=True)
+        bilingual_dataset.to_json(f'{target_dir}/{corpus}.json', orient='records')
+        bilingual_dataset = bilingual_dataset.rename(columns={"Text": "text_en", "Translation": "text_de", "tokens": "tokens_en", "tag": "tags_sequence_en", 'Label': "sent_type"}, errors="raise")
+        # bilingual_dataset = bilingual_dataset[:(1000 if (len(bilingual_dataset) > 1000) else len(bilingual_dataset))]
 
-    bilingual_dataset["tags_de"] = bilingual_dataset[:1000].progress_apply(lambda row: align_words(row['text_en'], row['text_de'], row['tags_en'], row['sent_type'], row.name), axis=1)
-    bilingual_dataset["tokens_de"] = bilingual_dataset.apply(lambda row: word_tokenize(row['text_de']), axis=1)
-    bilingual_dataset.dropna(inplace=True)
-    bilingual_dataset = bilingual_dataset[['sent_type', 'text_en', 'tags_en', 'tokens_en', 'text_de', 'tags_de', 'tokens_de', 'source', 'start_char', 'end_char', 'infile_offsets']]
-    bilingual_dataset.to_json(f'{target_dir}/{corpus}.json', orient='records')
-
-    print(f'Combining into {len(bilingual_dataset)} rows of the bilingual dataset')
-    return bilingual_dataset
-
+        bilingual_dataset["tags_sequence_de"] = bilingual_dataset.progress_apply(lambda row: align_words(row['text_en'], row['text_de'], row['tags_sequence_en'], row['sent_type'], row.name), axis=1)
+        bilingual_dataset.dropna(inplace=True)
+        bilingual_dataset["tags_ids_de"] = bilingual_dataset.apply(lambda row: assign_tag_ids(row['tags_sequence_de']), axis=1)
+        bilingual_dataset["relations_sequence_de"] = bilingual_dataset.apply(lambda row: assign_zero_relations(row['tags_sequence_de']), axis=1)
+        bilingual_dataset["tokens_de"] = bilingual_dataset.apply(lambda row: word_tokenize(row['text_de']), axis=1)
+        bilingual_dataset.dropna(inplace=True)
+        bilingual_dataset = bilingual_dataset[['sent_type', 'text_en', 'tags_sequence_en', 'tokens_en', 'text_de', 'tokens_de', 'tags_sequence_de', 'tags_ids_de', 'relations_sequence_de', 'source', 'start_char', 'end_char', 'infile_offsets']]
+        bilingual_dataset.to_json(f'{target_dir}/{corpus}.json', orient='records')
+        print(f'Combining into {len(bilingual_dataset)} rows of the bilingual dataset')
+        if lang == "de":
+            dataset_de = bilingual_dataset.drop(['text_en', 'tags_sequence_en', 'tokens_en', 'source', 'start_char', 'end_char', 'infile_offsets'])
+            dataset_de = dataset_de.rename({'text_de': 'text', 'tokens_de': 'tokens', 'tags_sequence_de': 'tags_sequence', 'tags_ids_de': 'tags_ids', 'relations_sequence_de': 'relations_sequence'})
+            return dataset_de
+        else:
+            bilingual_dataset = bilingual_dataset.drop(['source', 'start_char', 'end_char', 'infile_offsets'])
+            return bilingual_dataset
+    else:
+       print(f"ERROR! Pick lang as de, en or bilingual, not {lang}")
+       return np.nan
 
    
 if __name__ == '__main__':
-    target_dir = 'data/bilingual-small'
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lang", default='bilingual', type=str, required=False)
+    parser.add_argument("--target_dir", type=str, required=False)
+    args = parser.parse_args()
+    target_dir = args.target_dir if args.target_dir else f'data/{args.lang}'
+
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+
+    print(args.lang)
     print('Creating a train dataset...')
-    train_df = create_dataset('train')
+    train_df = create_dataset('train', target_dir, lang = args.lang)
     print('\nCreating a dev dataset...')
-    dev_df = create_dataset('dev')
+    dev_df = create_dataset('dev', target_dir, lang = args.lang)
     print('\nCreating a test dataset...')
-    test_df = create_dataset('test')
+    test_df = create_dataset('test', target_dir, lang = args.lang)
