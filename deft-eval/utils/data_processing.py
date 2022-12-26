@@ -10,7 +10,8 @@ from glob import glob
 
 
 EVAL_RELATIONS = [
-    'Direct-Defines', 'Indirect-Defines', 'AKA', 'Refers-To', 'Supplements'
+    '0'
+    # 'Direct-Defines', 'Indirect-Defines', 'AKA', 'Refers-To', 'Supplements'
 ]
 
 
@@ -334,6 +335,8 @@ def create_multitask_examples(
     df.loc[:, 'sent_type_labels'] = sent_types
     df.loc[:, 'roots'] = roots
     df.loc[:, 'relations'] = relations
+    print('df len', len(df))
+    print('df', df.head())
 
     examples = []
     for row_id, row in enumerate(df.itertuples()):
@@ -368,6 +371,7 @@ def create_multitask_examples(
                 }
                 examples.append(example)
 
+    print('examples len', len(examples))
     return examples
 
 

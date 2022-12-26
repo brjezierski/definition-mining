@@ -1,11 +1,9 @@
-# from transformers.models.bert.tokenization_bert import BasicTokenizer
-# from transformers.tokenization_bert import BertTokenizer
 from transformers import XLNetTokenizer
-# from transformers.tokenization_xlnet import XLNetTokenizer
 from transformers import BertConfig, BertTokenizer
-from transformers import RobertaConfig
+from transformers import RobertaConfig, AutoTokenizer, AutoModelForTokenClassification, AutoConfig
 from transformers import RobertaTokenizer
 from torch.utils.data import DataLoader, TensorDataset
+from .multitask_gbert import GBertForMultitaskLearning
 from .multitask_bert import BertForMultitaskLearning
 from .multitask_roberta import RobertaForMultitaskLearning
 from .multitask_xlnet import XLNetForMultiLearning
@@ -71,11 +69,6 @@ class DataProcessor(object):
                 if do_filter:
                     new_data = []
                     for example in data:
-                        if example[f'{prefix}_id'] != 0:
-                            continue
-                        example[f'{prefix}_start'] = -1
-                        example[f'{prefix}_end'] = -1
-
                         new_data.append(example)
                     data = new_data
 
@@ -124,6 +117,7 @@ class DataProcessor(object):
         sequence_type: str = 'tags_sequence',
         logger = None
     ):
+        tags_sequence_labels_list = ['O', 'B-Definition', 'I-Definition', 'B-Term', 'I-Term', 'B-Alias-Term', 'I-Alias-Term', 'B-Secondary-Definition', 'I-Secondary-Definition', 'B-Ordered-Term', 'I-Ordered-Term', 'B-Ordered-Definition', 'I-Ordered-Definition', 'B-Referential-Definition', 'I-Referential-Definition', 'B-Qualifier', 'I-Qualifier', 'B-Referential-Term', 'B-Definition-frag', 'I-Definition-frag', 'I-Referential-Term', 'B-Term-frag', 'B-Alias-Term-frag', 'I-Term-frag']
         dataset = self._read_json(
             os.path.join(data_dir, "train.json")
         )
@@ -143,6 +137,9 @@ class DataProcessor(object):
                 logger.info("%s: %.2f%%" % (label, counter * 100.0 / denominator))
             if label not in labels:
                 labels.append(label)
+        for tag in tags_sequence_labels_list:
+            if tag not in labels:
+                labels.append(tag)
         return labels
 
 
@@ -214,17 +211,20 @@ def get_dataloader_and_tensors(
 tokenizers = {
     "bert-large-uncased": BertTokenizer,
     "xlnet-large-cased": XLNetTokenizer,
-    "roberta-large": RobertaTokenizer
+    "roberta-large": RobertaTokenizer,
+    "deepset/gbert-large": AutoTokenizer.from_pretrained("deepset/gbert-large", use_fast=False)
 }
 
 models = {
     "bert-large-uncased": BertForMultitaskLearning,
     "roberta-large": RobertaForMultitaskLearning,
-    "xlnet-large-cased": XLNetForMultiLearning
+    "xlnet-large-cased": XLNetForMultiLearning,
+    "deepset/gbert-large": GBertForMultitaskLearning
 }
 
 configs = {
     "bert-large-uncased": BertConfig,
     "roberta-large": RobertaConfig,
-    "xlnet-large-cased": XLNetConfig
+    "xlnet-large-cased": XLNetConfig,
+    "deepset/gbert-large": AutoConfig.from_pretrained("deepset/gbert-large")
 }

@@ -25,7 +25,7 @@ from transformers.file_utils import (
 )
 
 from tqdm import tqdm
-from models.examples_to_features_working_version import (
+from models.examples_to_features import (
     get_dataloader_and_tensors,
     models, tokenizers, DataProcessor, configs
 )
