@@ -1,1 +1,2 @@
 deft-eval/training/w1-1-w2-1-e-3/best_sent_type_1_f1-score_pytorch_model.bin filter=lfs diff=lfs merge=lfs -text
+data/de/definitionen.csv.zip filter=lfs diff=lfs merge=lfs -text
