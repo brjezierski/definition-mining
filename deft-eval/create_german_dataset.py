@@ -322,7 +322,9 @@ def create_dataset(corpus, target_dir, deft_corpus_repo: str = 'deft_corpus', la
         bilingual_dataset.dropna(inplace=True)
         bilingual_dataset.to_json(f'{target_dir}/{corpus}.json', orient='records')
         bilingual_dataset = bilingual_dataset.rename(columns={"Text": "text_en", "Translation": "text_de", "tokens": "tokens_en", "tag": "tags_sequence_en", 'Label': "sent_type"}, errors="raise")
-        # bilingual_dataset = bilingual_dataset[:(1000 if (len(bilingual_dataset) > 1000) else len(bilingual_dataset))]
+        # convert sent_type to string
+        bilingual_dataset['sent_type'] = bilingual_dataset['sent_type'].astype(str)
+        # bilingual_dataset = bilingual_dataset[:(100 if (len(bilingual_dataset) > 100) else len(bilingual_dataset))]
 
         bilingual_dataset["tags_sequence_de"] = bilingual_dataset.progress_apply(lambda row: align_words(row['text_en'], row['text_de'], row['tags_sequence_en'], row['sent_type'], row.name), axis=1)
         bilingual_dataset.dropna(inplace=True)
@@ -334,7 +336,7 @@ def create_dataset(corpus, target_dir, deft_corpus_repo: str = 'deft_corpus', la
         bilingual_dataset.to_json(f'{target_dir}/{corpus}.json', orient='records')
         print(f'Combining into {len(bilingual_dataset)} rows of the bilingual dataset')
         if lang == "de":
-            dataset_de = bilingual_dataset.drop(['text_en', 'tags_sequence_en', 'tokens_en', 'source', 'start_char', 'end_char', 'infile_offsets'])
+            dataset_de = bilingual_dataset.drop(['text_en', 'tags_sequence_en', 'tokens_en', 'source', 'start_char', 'end_char', 'infile_offsets'], axis=1)
             dataset_de = dataset_de.rename({'text_de': 'text', 'tokens_de': 'tokens', 'tags_sequence_de': 'tags_sequence', 'tags_ids_de': 'tags_ids', 'relations_sequence_de': 'relations_sequence'})
             return dataset_de
         else:
