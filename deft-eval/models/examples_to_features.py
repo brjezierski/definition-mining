@@ -12,6 +12,7 @@ import torch
 import os
 import json
 from collections import Counter
+from nltk.tokenize import word_tokenize
 
 
 class InputExample(object):
@@ -73,6 +74,31 @@ class DataProcessor(object):
                     data = new_data
 
         return data
+    
+    def _read_test_json(self, input_file, text_column_title='text'):
+        with open(input_file, "r", encoding='utf-8') as reader:
+            data = json.load(reader)
+            for (prefix, do_filter) in [
+                ('sent', self.filter_task_1), ('subj', self.filter_task_3)
+            ]:
+                if do_filter:
+                    new_data = []
+                    for example in data:
+                        if 'tokens' not in example.keys():
+                            example['tokens'] = word_tokenize(example[text_column_title])
+                        token_count = len(example['tokens'])
+                        if 'relations_sequence' not in example.keys():
+                            example['relations_sequence'] = ["0"] * token_count
+                        if 'tags_ids' not in example.keys():
+                            example['tags_ids'] = ["-1"] * token_count
+                        if 'tags_sequence' not in example.keys():
+                            example['tags_sequence'] = ["O"] * token_count
+                        if 'sent_type' not in example.keys():
+                            example['sent_type'] = '0'
+                        new_data.append(example)
+                    data = new_data
+
+        return data
 
     def get_train_examples(self, data_dir):
         return self.create_examples(
@@ -90,9 +116,9 @@ class DataProcessor(object):
             "dev"
         )
 
-    def get_test_examples(self, test_file):
+    def get_test_examples(self, test_file, text_column_title):
         return self.create_examples(
-            self._read_json(test_file),
+            self._read_test_json(test_file, text_column_title),
             "test"
         )
 
@@ -110,6 +136,19 @@ class DataProcessor(object):
             if label not in labels:
                 labels.append(label)
         return labels
+
+    def get_hardcoded_sequence_labels(
+        self,
+        language,
+        sequence_type: str = 'tags_sequence'
+    ):
+        if sequence_type == 'tags_sequence':
+            return ['O', 'B-Definition', 'I-Definition', 'B-Term', 'I-Term', 'B-Alias-Term', 'I-Alias-Term', 'B-Secondary-Definition', 'I-Secondary-Definition', 'B-Ordered-Term', 'I-Ordered-Term', 'B-Ordered-Definition', 'I-Ordered-Definition', 'B-Referential-Definition', 'I-Referential-Definition', 'B-Qualifier', 'I-Qualifier', 'B-Referential-Term', 'B-Definition-frag', 'I-Definition-frag', 'I-Referential-Term', 'B-Term-frag', 'B-Alias-Term-frag', 'I-Term-frag']
+        else:
+            if language == 'en':
+                return ['0'] * 7
+            else:
+                return ['0'] * 25
 
     def get_sequence_labels(
         self,

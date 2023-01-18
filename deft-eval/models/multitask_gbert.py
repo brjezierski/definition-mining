@@ -68,13 +68,6 @@ class GBertForMultitaskLearning(BertPreTrainedModel):
         assert pooling_type in ['first', 'avg', 'mid', 'last']
         self.pooling_type = pooling_type
 
-        print(
-            'tasks dimensions:',
-            self.num_sent_type_labels,
-            self.num_tags_sequence_labels,
-            self.num_relations_sequence_labels
-        )
-
         self.init_weights()
 
     def forward(
@@ -366,7 +359,7 @@ class GBertForMultitaskLearning(BertPreTrainedModel):
             token_valid_pos_ids += [-1] * padding_length
 
             try:
-                sent_type_id = label2id['sent_type'][example.sent_type]
+                sent_type_id = label2id['sent_type'][str(example.sent_type)]
                 tags_sequence_ids = [
                     label2id['tags_sequence'][lab]
                     for lab in tags_sequence_labels

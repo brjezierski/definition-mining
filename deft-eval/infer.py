@@ -269,25 +269,9 @@ def main(args):
         'relations_sequence_macro-avg_f1-score' in eval_metrics:
         eval_metrics.pop('relations_sequence_macro-avg_f1-score')
 
-    assert len(eval_metrics) > 0, "inconsistent train params"
-
-    # if args.context_mode != 'full':
-    #     keys = list(eval_metrics.keys())
-    #     for key in keys:
-    #         if key != 'sent_type_1_f1-score':
-    #             eval_metrics.pop(key)
-    #     assert 'sent_type_1_f1-score' in eval_metrics
-
-    sent_type_labels_list = \
-        processor.get_sent_type_labels(args.data_dir, logger)
-    tags_sequence_labels_list = \
-        processor.get_sequence_labels(
-            args.data_dir, logger=logger, sequence_type='tags_sequence'
-        )
-    relations_sequence_labels_list = \
-        processor.get_sequence_labels(
-            args.data_dir, logger=logger, sequence_type='relations_sequence'
-        )
+    sent_type_labels_list = ['0', '1']
+    tags_sequence_labels_list = processor.get_hardcoded_sequence_labels(args.language, sequence_type='tags_sequence')
+    relations_sequence_labels_list = processor.get_hardcoded_sequence_labels(args.language, sequence_type='relations_sequence')
 
     label2id = {
         'sent_type': {
@@ -313,7 +297,7 @@ def main(args):
         }
     }
 
-    num_sent_type_labels = len(sent_type_labels_list)
+    num_sent_type_labels = 2
     num_tags_sequence_labels = len(tags_sequence_labels_list) + 1
     num_relations_sequence_labels = len(relations_sequence_labels_list) + 1
 
@@ -323,7 +307,7 @@ def main(args):
     )
 
     model_name = args.model
-
+    
     model = models[model_name].from_pretrained(
             args.model_dir,
             num_sent_type_labels=num_sent_type_labels,
@@ -334,6 +318,7 @@ def main(args):
             relations_sequence_clf_weight=args.relations_sequence_clf_weight,
             pooling_type=args.subtokens_pooling_type
         )
+
 
     model.to(device)
 
@@ -434,9 +419,9 @@ def write_predictions(
         'sent_type_scores': [
             str(score) for score in scores['sent_type']
         ],
-        'tags_sequence_labels': [
-            ' '.join(ex.tags_sequence) for ex in examples
-        ],
+        # 'tags_sequence_labels': [
+        #     ' '.join(ex.tags_sequence) for ex in examples
+        # ],
         'tags_sequence_pred': [
             ' '.join([id2label['tags_sequence'][x] if x != 0 else 'O' for x in sent])
             for sent in aggregated_results['tags_sequence']
@@ -448,17 +433,17 @@ def write_predictions(
         'tags_ids': [
             ' '.join(ex.tags_ids) for ex in examples
         ],
-        'relations_sequence_labels': [
-            ' '.join(ex.relations_sequence) for ex in examples
-        ],
-        'relations_sequence_pred': [
-            ' '.join([id2label['relations_sequence'][x] if x != 0 else '0' for x in sent])
-            for sent in aggregated_results['relations_sequence']
-        ],
-        'relations_sequence_scores': [
-            ' '.join([str(score) for score in sent])
-            for sent in aggregated_results['relations_sequence_scores']
-        ],
+        # 'relations_sequence_labels': [
+        #     ' '.join(ex.relations_sequence) for ex in examples
+        # ],
+        # 'relations_sequence_pred': [
+        #     ' '.join([id2label['relations_sequence'][x] if x != 0 else '0' for x in sent])
+        #     for sent in aggregated_results['relations_sequence']
+        # ],
+        # 'relations_sequence_scores': [
+        #     ' '.join([str(score) for score in sent])
+        #     for sent in aggregated_results['relations_sequence_scores']
+        # ],
     }
 
     prediction_results = pd.DataFrame(prediction_results)
@@ -559,6 +544,7 @@ if __name__ == "__main__":
                         help="threshold for best models to save")
     parser.add_argument("--model_prefix", type=str, default='',
                         help="pefix of the model weight")
+    parser.add_argument("--language", default='en', type=str, required=True)
 
     parsed_args = parser.parse_args()
     main(parsed_args)
