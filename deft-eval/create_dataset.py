@@ -31,16 +31,7 @@ class bcolors:
 	LightCyan    = "\033[96m"
 	White        = "\033[97m"
 
-
 tqdm.pandas()
-nltk.download('punkt')
-myaligner = SentenceAligner(model="bert", token_type="bpe", matching_methods="mai")
-
-spacy.require_gpu()
-# os.system("spacy download de_dep_news_trf")
-
-# nlp = load_spacy('de_dep_news_trf')  # Will download the model if it isn't installed yet
-nlp = spacy.load('de_dep_news_trf')
 
 EVAL_TAGS = [
     'B-Term', 'I-Term', 'B-Definition', 'I-Definition',
@@ -57,6 +48,19 @@ def cstr(s, color=bcolors.Default):
 def remove_order_tag(relation):
    return relation.replace('B-', '').replace('I-', '')
 
+
+def display_tag_color_legend():
+  tagged_sent = ["Color coding:"]
+  tagged_sent.append(cstr("\tDefinition", color=bcolors.Blue))
+  tagged_sent.append(cstr("\tSecondary-Definition", color=bcolors.LightBlue))
+  tagged_sent.append(cstr("\tOrdered-Definition", color=bcolors.Cyan))
+  tagged_sent.append(cstr("\tReferential-Definition", color=bcolors.LightCyan))
+  tagged_sent.append(cstr("\tTerm", color=bcolors.Red))
+  tagged_sent.append(cstr("\tOrdered-Term", color=bcolors.LightRed))
+  tagged_sent.append(cstr("\tReferential-Term", color=bcolors.LightMagenta))
+  tagged_sent.append(cstr("\tQualifier", color=bcolors.Green))
+  tagged_sent.append(cstr("\tO", color=bcolors.Default))
+  return "\n".join(tagged_sent)
 
 def display_tagged_sent(sent, tags):
   tagged_sent = []
@@ -94,7 +98,6 @@ def get_tag_id_dict(df):
     return get_tag_id_dict
       
 def align_words(en_raw, de_raw, en_relations_sequence, label, ind, to_print=False):
-#   print(en_relations_sequence)
   relation_tags = list(filter(lambda relation: relation.startswith("B-"), en_relations_sequence))
   relation_tags = [remove_order_tag(tag) for tag in relation_tags]
   en_relations_sequence = [remove_order_tag(seq) for seq in en_relations_sequence]
@@ -103,7 +106,7 @@ def align_words(en_raw, de_raw, en_relations_sequence, label, ind, to_print=Fals
   de_sent = word_tokenize(de_sent)
   de_raw = word_tokenize(de_raw)
 
-  if label == 0:
+  if label == "0":
     return ["O"] * len(de_raw)
 
   en_sent = en_raw
@@ -163,7 +166,6 @@ def align_words(en_raw, de_raw, en_relations_sequence, label, ind, to_print=Fals
   if ind % 40 == 0:
     print(display_tagged_sent(en_raw, en_relations_sequence))
     print(display_tagged_sent(de_raw, de_relations_sequence))
-    # print('after',de_relations_sequence)
 
   return de_relations_sequence
 
@@ -203,7 +205,6 @@ def read_task_2(
 
     for file in sorted(os.listdir(data_dir)):
       if file.startswith('task_2'):
-        # print(file)
         with open(os.path.join(data_dir, file)) as fp:
             file_lines = [line.strip() for line in fp.readlines()]
 
@@ -236,20 +237,30 @@ def read_task_2(
     print(f'Grouping into {len(all_sentences)-len(sentence_starts)} rows')
 
     window_sentences = []
-    for i in range(len(all_sentences) - 1):
-      sentence = all_sentences[i]
-      if len(sentence) == 2 and sentence[0][0].isdigit() and (sentence[1][0] == '.'):
-        window_sentence = []
-        window_sentence.extend(sentence)
-        saw_number = True
-      elif saw_number:
-        saw_number = False
-        window_sentence.extend(sentence)
-        window_sentences.append(window_sentence)
-      else:
-        window_sentence = []
-        window_sentence.extend(sentence)
-        window_sentences.append(window_sentence)
+    window_sentence = []
+    saw_number = False
+
+    if args.sent_aggregation in ['window', 'both']:
+      for i in range(len(all_sentences) - 1):
+        sentence = all_sentences[i]
+        if len(sentence) == 2 and sentence[0][0].isdigit() and (sentence[1][0] == '.'):
+          if len(window_sentence) > 0:
+            window_sentences.append(window_sentence)
+          window_sentence = []
+          window_sentence.extend(sentence)
+          saw_number = True
+        elif saw_number:
+          window_sentence.extend(sentence)
+        else:
+          window_sentence = []
+          window_sentence.extend(sentence)
+          window_sentences.append(window_sentence)
+    if args.sent_aggregation in ['single', 'both']:
+      for i in range(len(all_sentences) - 1):
+        sentence = all_sentences[i]
+        if len(sentence) == 2 and sentence[0][0].isdigit() and (sentence[1][0] == '.'):
+          continue
+        window_sentences.append(sentence)
 
     columns = columns[:num_columns]
 
@@ -260,12 +271,9 @@ def read_task_2(
 
     for window_sentence in window_sentences:
         sentence = defaultdict(list)
-        # print('sentence', window_sentence)
         for fields in window_sentence:
             for i, column_name in enumerate(columns):
                 column_value = fields[i]
-                # print('column_name', column_name)
-                # print('field', fields[i])
                 column_value = filter_value(
                     column_value, EVAL_TAGS, 'O'
                 )
@@ -274,6 +282,13 @@ def read_task_2(
 
         for column_name in sentence:
             result[column_name].append(sentence[column_name])
+        sent_type = "0"
+
+        for tag in sentence["tag"]:
+          if "Definition" in tag:
+            sent_type = "1"
+            break
+        result["sent_type"].append(sent_type)
 
     return result
 
@@ -281,6 +296,7 @@ def read_task_2(
 def load_de_translation(corpus, de_corpus_repo: str = '../data/de'):
    translation_corpus_dir=f'{de_corpus_repo}/{corpus}.tsv'
    dataset = pd.read_csv(translation_corpus_dir, on_bad_lines='skip', sep='\t')
+
    dataset['Text'] = dataset['Text'].str.strip()
    dataset['Translation'] = dataset['Translation'].str.strip()
    dataset = dataset.drop_duplicates(subset=['Text'])
@@ -297,7 +313,7 @@ def create_dataset(corpus, target_dir, deft_corpus_repo: str = 'deft_corpus', la
     task_2_columns = [
                 'tokens', 'source', 'start_char',
                 'end_char', 'tag', 'infile_offsets',
-                'part'
+                'part', 'sent_type'
             ]
     for column in columns:
         if column not in task_2_columns:
@@ -305,14 +321,13 @@ def create_dataset(corpus, target_dir, deft_corpus_repo: str = 'deft_corpus', la
 
     dataset_en = pd.DataFrame(part)
     if lang == "en":
-        print("English only")
         dataset_en = dataset_en.rename(columns={"tag": "tags_sequence"}, errors="raise")
         dataset_en["tags_ids"] = dataset_en.apply(lambda row: assign_tag_ids(row['tags_sequence']), axis=1)
         dataset_en["relations_sequence"] = dataset_en.apply(lambda row: assign_zero_relations(row['tags_sequence']), axis=1)
         dataset_en = dataset_en.drop_duplicates(subset=['tokens'])
-        dataset_en.to_json(f'{target_dir}/{corpus}.json', orient='records')
         return dataset_en
     elif lang == "de" or lang == "bilingual":
+        dataset_en.drop(columns=['sent_type'], inplace=True, axis=1)
         dataset_en['Text'] = dataset_en['tokens'].apply(' '.join)
         dataset_en = dataset_en.drop_duplicates(subset=['Text'])
         dataset_de = load_de_translation(corpus)
@@ -320,11 +335,10 @@ def create_dataset(corpus, target_dir, deft_corpus_repo: str = 'deft_corpus', la
 
         bilingual_dataset = pd.merge(dataset_de, dataset_en, left_on='Text', right_on='Text', how='left')
         bilingual_dataset.dropna(inplace=True)
-        bilingual_dataset.to_json(f'{target_dir}/{corpus}.json', orient='records')
         bilingual_dataset = bilingual_dataset.rename(columns={"Text": "text_en", "Translation": "text_de", "tokens": "tokens_en", "tag": "tags_sequence_en", 'Label': "sent_type"}, errors="raise")
         # convert sent_type to string
         bilingual_dataset['sent_type'] = bilingual_dataset['sent_type'].astype(str)
-        # bilingual_dataset = bilingual_dataset[:(100 if (len(bilingual_dataset) > 100) else len(bilingual_dataset))]
+        bilingual_dataset = bilingual_dataset[:(10 if (len(bilingual_dataset) > 100) else len(bilingual_dataset))]
 
         bilingual_dataset["tags_sequence_de"] = bilingual_dataset.progress_apply(lambda row: align_words(row['text_en'], row['text_de'], row['tags_sequence_en'], row['sent_type'], row.name), axis=1)
         bilingual_dataset.dropna(inplace=True)
@@ -337,30 +351,73 @@ def create_dataset(corpus, target_dir, deft_corpus_repo: str = 'deft_corpus', la
         print(f'Combining into {len(bilingual_dataset)} rows of the bilingual dataset')
         if lang == "de":
             dataset_de = bilingual_dataset.drop(['text_en', 'tags_sequence_en', 'tokens_en', 'source', 'start_char', 'end_char', 'infile_offsets'], axis=1)
-            dataset_de = dataset_de.rename({'text_de': 'text', 'tokens_de': 'tokens', 'tags_sequence_de': 'tags_sequence', 'tags_ids_de': 'tags_ids', 'relations_sequence_de': 'relations_sequence'})
+            dataset_de = dataset_de.rename({'text_de': 'text', 'tokens_de': 'tokens', 'tags_sequence_de': 'tags_sequence', 'tags_ids_de': 'tags_ids', 'relations_sequence_de': 'relations_sequence'}, axis=1)
             return dataset_de
         else:
-            bilingual_dataset = bilingual_dataset.drop(['source', 'start_char', 'end_char', 'infile_offsets'])
+            bilingual_dataset = bilingual_dataset.drop(['source', 'start_char', 'end_char', 'infile_offsets'], axis=1)
             return bilingual_dataset
     else:
        print(f"ERROR! Pick lang as de, en or bilingual, not {lang}")
        return np.nan
 
-   
+def assign_zero_tags(sentence):
+   tokens = word_tokenize(sentence)
+   tags_sequence = ["O"] * len(tokens)
+   return tags_sequence
+
+def assign_one_sent_types(sentence):
+   sent_type = "1"
+   return sent_type
+
+def convert_definitionen(df):
+  #  dataset = pd.read_csv('data/de/definitionen.csv', on_bad_lines='skip')
+   df['tokens'] = df['terminus'].str.strip()
+   df = df.dropna()
+   df = df.drop_duplicates(subset=['tokens'])
+   df = df.drop(['key', 'terminus', 'i'], axis=1)
+
+   df["tags_sequence"] = df.progress_apply(lambda row: assign_zero_tags(row['tokens']), axis=1)
+   df["sent_type"] = df.progress_apply(lambda row: assign_one_sent_types(row['tokens']), axis=1)
+   df["relations_sequence"] = df.progress_apply(lambda row: assign_zero_relations(row['tags_sequence']), axis=1)
+
+   df["tags_ids"] = df.apply(lambda row: assign_tag_ids(row['tags_sequence']), axis=1)
+
+   return df
+
+
+def get(df):
+    tag_dict = {}
+    for index, row in df.iterrows():
+       for tag, id in zip(row['tags_sequence'], row['tags_ids']):
+          if tag not in tag_dict:
+             tag_dict[tag] = id   
+
 if __name__ == '__main__':
+    nltk.download('punkt')
+    myaligner = SentenceAligner(model="bert", token_type="bpe", matching_methods="mai")
+    spacy.require_gpu()
+    # os.system("spacy download de_dep_news_trf")
+    nlp = spacy.load('de_dep_news_trf')
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", default='bilingual', type=str, required=False)
     parser.add_argument("--target_dir", type=str, required=False)
+    parser.add_argument("--sent_aggregation", default='single', type=str, required=False) #single or window or both
     args = parser.parse_args()
+    if args.lang in ["de", "bilingual"] and args.sent_aggregation in ["window", "both"]:
+        print("ERROR! Right now only single sentence aggregation is supported for German")
+        exit()
     target_dir = args.target_dir if args.target_dir else f'data/{args.lang}'
 
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
-    print(args.lang)
     print('Creating a train dataset...')
     train_df = create_dataset('train', target_dir, lang = args.lang)
+    train_df.to_json(f'{target_dir}/train.json', orient='records')
     print('\nCreating a dev dataset...')
     dev_df = create_dataset('dev', target_dir, lang = args.lang)
+    dev_df.to_json(f'{target_dir}/dev.json', orient='records')
     print('\nCreating a test dataset...')
     test_df = create_dataset('test', target_dir, lang = args.lang)
+    test_df.to_json(f'{target_dir}/test.json', orient='records')
