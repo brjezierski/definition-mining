@@ -1,44 +1,18 @@
 import argparse
 import logging
 import os
-import random
-import time
-import json
-from datetime import datetime
-import tempfile
-import shutil
 
 import numpy as np
 import pandas as pd
 import torch
 from scipy.special import softmax
 
-from torch.nn import CrossEntropyLoss
-
-from transformers.optimization import (
-    AdamW, get_linear_schedule_with_warmup,
-    get_constant_schedule_with_warmup
-)
-from transformers.file_utils import (
-    PYTORCH_PRETRAINED_BERT_CACHE,
-    WEIGHTS_NAME, CONFIG_NAME
-)
-
 from tqdm import tqdm
 from models.examples_to_features import (
     get_dataloader_and_tensors,
-    models, tokenizers, DataProcessor, configs
+    models, tokenizers, DataProcessor
 )
 from collections import defaultdict
-from sklearn.metrics import (
-    precision_recall_fscore_support, classification_report
-)
-from torch.nn import CrossEntropyLoss
-from utils.data_processing import (
-    EVAL_TAGS
-)
-
-from torch.utils.tensorboard import SummaryWriter
 
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
@@ -177,7 +151,7 @@ def main(args):
 
     model.to(device)
     
-    test_examples = processor.get_test_examples(args.input_file)
+    test_examples = processor.get_test_examples(args.input_file, args.text_column)
     test_features, test_new_examples = model.convert_examples_to_features(
                 test_examples, label2id, args.max_seq_length,
                 tokenizer, logger, args.sequence_mode, context_mode=args.context_mode
@@ -298,6 +272,8 @@ if __name__ == "__main__":
                         help="context for task 1: one from center, full, left, right")
     parser.add_argument("--eval_batch_size", default=8, type=int,
                         help="Total batch size for eval.")
+    parser.add_argument("--text_column", default="text", type=str,
+                        help="The title of the column with text.")
 
     parsed_args = parser.parse_args()
     main(parsed_args)

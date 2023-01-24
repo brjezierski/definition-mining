@@ -39,6 +39,8 @@ from utils.data_processing import (
 )
 
 from torch.utils.tensorboard import SummaryWriter
+from transformers import AutoTokenizer, AutoConfig, AutoModel
+from models.multitask_gbert import GBertForMultitaskLearning
 
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
@@ -420,29 +422,45 @@ def main(args):
     num_relations_sequence_labels = len(relations_sequence_labels_list) + 1
 
     do_lower_case = 'uncased' in args.model
-    tokenizer = tokenizers[args.model].from_pretrained(
-        args.model, do_lower_case=do_lower_case
-    )
+    if args.model == 'brjezierski/def_mining_de':
+        tokenizer = AutoTokenizer.from_pretrained("deepset/gbert-large", use_fast=False)
+    else:
+        tokenizer = tokenizers[args.model].from_pretrained(
+            args.model, do_lower_case=do_lower_case
+        )
 
     model_name = args.model
 
     if args.do_train:
-        config = configs[args.model]
-        config = config.from_pretrained(
-            args.model,
-            hidden_dropout_prob=args.dropout
-        )
-        model = models[model_name].from_pretrained(
-            args.model, cache_dir=str(PYTORCH_PRETRAINED_BERT_CACHE),
-            num_sent_type_labels=num_sent_type_labels,
-            num_tags_sequence_labels=num_tags_sequence_labels,
-            num_relations_sequence_labels=num_relations_sequence_labels,
-            sent_type_clf_weight=args.sent_type_clf_weight,
-            tags_sequence_clf_weight=args.tags_sequence_clf_weight,
-            relations_sequence_clf_weight=args.relations_sequence_clf_weight,
-            pooling_type=args.subtokens_pooling_type,
-            config=config
-        )
+        if model_name == "brjezierski/def_mining_de":
+            config = AutoConfig.from_pretrained("deepset/gbert-large")
+        else:
+            config = configs[args.model]
+            config = config.from_pretrained(
+                args.model,
+                hidden_dropout_prob=args.dropout
+            )
+        if model_name == "brjezierski/def_mining_de":
+            model = GBertForMultitaskLearning.from_pretrained(
+                "training/de-gbert_6e",
+                # "brjezierski/def_mining_de", 
+                num_sent_type_labels=num_sent_type_labels,
+                num_tags_sequence_labels=num_tags_sequence_labels,
+                num_relations_sequence_labels=num_relations_sequence_labels,
+                pooling_type="first",
+                use_auth_token=True)
+        else:
+            model = models[model_name].from_pretrained(
+                args.model, cache_dir=str(PYTORCH_PRETRAINED_BERT_CACHE),
+                num_sent_type_labels=num_sent_type_labels,
+                num_tags_sequence_labels=num_tags_sequence_labels,
+                num_relations_sequence_labels=num_relations_sequence_labels,
+                sent_type_clf_weight=args.sent_type_clf_weight,
+                tags_sequence_clf_weight=args.tags_sequence_clf_weight,
+                relations_sequence_clf_weight=args.relations_sequence_clf_weight,
+                pooling_type=args.subtokens_pooling_type,
+                config=config
+            )
         print(
             "task weights:",
             model.sent_type_clf_weight,
@@ -480,7 +498,7 @@ def main(args):
         test_file = os.path.join(
             args.data_dir, 'test.json'
         ) if args.test_file == '' else args.test_file
-        test_examples = processor.get_test_examples(test_file)
+        test_examples = processor.get_test_examples(test_file, args.text_column)
 
         test_features, test_new_examples = model.convert_examples_to_features(
             test_examples, label2id, args.max_seq_length,
@@ -1012,8 +1030,10 @@ if __name__ == "__main__":
                         " dirs to exclude fome trainig")
     parser.add_argument("--skip_every_n_examples", type=int, default=30,
                         help="number examples in train set to skip in evaluating metrics")
-    parser.add_argument("--model_prefix", type=str, default='best_sent_type_1_f1-score_',
+    parser.add_argument("--model_prefix", type=str, default='',
                         help="pefix of the model weight")
+    parser.add_argument("--text_column", default="text", type=str,
+                        help="The title of the column with text.")
 
     parsed_args = parser.parse_args()
     main(parsed_args)

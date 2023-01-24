@@ -255,12 +255,21 @@ def read_task_2(
           window_sentence = []
           window_sentence.extend(sentence)
           window_sentences.append(window_sentence)
+    window_sentences = []
+    window_sentence = []
     if args.sent_aggregation in ['single', 'both']:
       for i in range(len(all_sentences) - 1):
         sentence = all_sentences[i]
         if len(sentence) == 2 and sentence[0][0].isdigit() and (sentence[1][0] == '.'):
+          window_sentence = []
+          window_sentence.extend(sentence)
           continue
-        window_sentences.append(sentence)
+        if window_sentence != []:
+          window_sentence.extend(sentence)
+          window_sentences.append(window_sentence)
+          window_sentence = []
+        else:
+          window_sentences.append(sentence)
 
     columns = columns[:num_columns]
 
@@ -338,7 +347,7 @@ def create_dataset(corpus, target_dir, deft_corpus_repo: str = 'deft_corpus', la
         bilingual_dataset = bilingual_dataset.rename(columns={"Text": "text_en", "Translation": "text_de", "tokens": "tokens_en", "tag": "tags_sequence_en", 'Label': "sent_type"}, errors="raise")
         # convert sent_type to string
         bilingual_dataset['sent_type'] = bilingual_dataset['sent_type'].astype(str)
-        bilingual_dataset = bilingual_dataset[:(10 if (len(bilingual_dataset) > 100) else len(bilingual_dataset))]
+        # bilingual_dataset = bilingual_dataset[:(10 if (len(bilingual_dataset) > 100) else len(bilingual_dataset))]
 
         bilingual_dataset["tags_sequence_de"] = bilingual_dataset.progress_apply(lambda row: align_words(row['text_en'], row['text_de'], row['tags_sequence_en'], row['sent_type'], row.name), axis=1)
         bilingual_dataset.dropna(inplace=True)

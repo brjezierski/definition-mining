@@ -1,6 +1,6 @@
 from transformers import XLNetTokenizer
 from transformers import BertConfig, BertTokenizer
-from transformers import RobertaConfig, AutoTokenizer, AutoModelForTokenClassification, AutoConfig
+from transformers import RobertaConfig, AutoTokenizer, AutoConfig
 from transformers import RobertaTokenizer
 from torch.utils.data import DataLoader, TensorDataset
 from .multitask_gbert import GBertForMultitaskLearning
@@ -265,5 +265,6 @@ configs = {
     "bert-large-uncased": BertConfig,
     "roberta-large": RobertaConfig,
     "xlnet-large-cased": XLNetConfig,
-    "deepset/gbert-large": AutoConfig.from_pretrained("deepset/gbert-large")
+    "deepset/gbert-large": AutoConfig.from_pretrained("deepset/gbert-large"),
+    "brjezierski/def_mining_de": AutoConfig.from_pretrained("deepset/gbert-large")
 }
