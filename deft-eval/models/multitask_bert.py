@@ -16,7 +16,7 @@ class InputFeatures(object):
 
     def __init__(
             self, input_ids, input_mask, segment_ids,
-            sent_type_id, tags_sequence_ids, relations_sequence_ids,
+            sent_type_id, tags_sequence_ids,
             orig_positions_map, token_valid_pos_ids=None
         ):
         self.input_ids = input_ids
@@ -24,7 +24,6 @@ class InputFeatures(object):
         self.segment_ids = segment_ids
         self.sent_type_id = sent_type_id
         self.tags_sequence_ids = tags_sequence_ids
-        self.relations_sequence_ids = relations_sequence_ids
         self.orig_positions_map = orig_positions_map
         self.token_valid_pos_ids = token_valid_pos_ids
 
@@ -35,7 +34,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
             self,
             config: BertTokenizer,
             num_tags_sequence_labels: int,
-            num_relations_sequence_labels: int,
             num_sent_type_labels: int = 2,
             sent_type_clf_weight: float = 1.0,
             tags_sequence_clf_weight: float = 1.0,
@@ -46,11 +44,9 @@ class BertForMultitaskLearning(BertPreTrainedModel):
 
         self.sent_type_clf_weight = sent_type_clf_weight
         self.tags_sequence_clf_weight = tags_sequence_clf_weight
-        self.relations_sequence_clf_weight = relations_sequence_clf_weight
 
         self.num_sent_type_labels = num_sent_type_labels
         self.num_tags_sequence_labels = num_tags_sequence_labels
-        self.num_relations_sequence_labels = num_relations_sequence_labels
 
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -61,9 +57,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
         self.tags_sequence_classifier = nn.Linear(
             config.hidden_size, self.num_tags_sequence_labels
         )
-        self.relations_sequence_classifier = nn.Linear(
-            config.hidden_size, self.num_relations_sequence_labels
-        )
 
         assert pooling_type in ['first', 'avg', 'mid', 'last']
         self.pooling_type = pooling_type
@@ -72,7 +65,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
             'tasks dimensions:',
             self.num_sent_type_labels,
             self.num_tags_sequence_labels,
-            self.num_relations_sequence_labels
         )
 
         self.init_weights()
@@ -87,7 +79,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
             inputs_embeds=None,
             sent_type_labels=None,
             tags_sequence_labels=None,
-            relations_sequence_labels=None,
             token_valid_pos_ids=None,
             device=torch.device('cuda'),
             return_outputs=True
@@ -101,7 +92,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
         :param inputs_embeds: bert's inputs_embeds
         :param sent_type_labels: target task 1 labels
         :param tags_sequence_labels: target task 2 labels
-        :param relations_sequence_labels: target task 1 labels
         :param token_valid_pos_ids: sequence encoding token positions
         for pooling. Example: [hel #lo wor #ld !] [0, 0, 1, 1, 2]
         :param device: torch.device
@@ -129,13 +119,10 @@ class BertForMultitaskLearning(BertPreTrainedModel):
         sent_type_logits = self.sent_type_classifier(pooled_output)
         tags_sequence_logits = \
             self.tags_sequence_classifier(valid_sequence_output)
-        relations_sequence_logits = \
-            self.relations_sequence_classifier(valid_sequence_output)
 
         outputs = (
             sent_type_logits,
             tags_sequence_logits,
-            relations_sequence_logits,
         ) + outputs[2:]
 
         loss_fct = CrossEntropyLoss()
@@ -156,17 +143,10 @@ class BertForMultitaskLearning(BertPreTrainedModel):
             loss_fct(active_logits, active_labels)
 
         loss_fct = CrossEntropyLoss(ignore_index=0)
-        active_labels = relations_sequence_labels.view(-1)
-        active_logits = relations_sequence_logits.view(
-            -1, self.num_relations_sequence_labels
-        )
-        loss['relations_sequence_loss'] = \
-            loss_fct(active_logits, active_labels)
 
         loss['weighted_loss'] = \
             self.sent_type_clf_weight * loss['sent_type_loss'] + \
-            self.tags_sequence_clf_weight * loss['tags_sequence_loss'] + \
-            self.relations_sequence_clf_weight * loss['relations_sequence_loss']
+            self.tags_sequence_clf_weight * loss['tags_sequence_loss']
 
         if return_outputs:
             outputs = (outputs, loss)
@@ -261,7 +241,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
         num_fit_examples = 0
         features = []
         neg_tags_sequence_label = 'O'
-        neg_relations_sequence_label = '0'
         pad_token = "[PAD]"
         sep_token = "[SEP]"
         cls_token = "[CLS]"
@@ -271,14 +250,13 @@ class BertForMultitaskLearning(BertPreTrainedModel):
 
         def update_example_data(
             token=[], tags_sequence_label=[],
-            relations_sequence_label=[], mask=[1], offset_step=0,
+            mask=[1], offset_step=0,
             token_valid_pos_id=[], orig_position=[]
         ):
-            nonlocal tokens, tags_sequence_labels, relations_sequence_labels, \
+            nonlocal tokens, tags_sequence_labels, \
                 attention_mask, offset, token_valid_pos_ids, orig_positions_map
             tokens += token
             tags_sequence_labels += tags_sequence_label
-            relations_sequence_labels += relations_sequence_label
             attention_mask += mask
             offset += offset_step
             token_valid_pos_ids += token_valid_pos_id
@@ -297,7 +275,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
 
             tokens = [cls_token]
             tags_sequence_labels = [neg_tags_sequence_label]
-            relations_sequence_labels = [neg_relations_sequence_label]
             attention_mask = [1]
             offset = len(tokens)
             token_valid_pos_ids = [0]
@@ -305,12 +282,10 @@ class BertForMultitaskLearning(BertPreTrainedModel):
 
             out_of_context_subj = False
 
-            for i, (token, tags_sequence_label,
-                relations_sequence_label) in enumerate(
+            for i, (token, tags_sequence_label) in enumerate(
                 zip(
                     example.tokens,
-                    example.tags_sequence,
-                    example.relations_sequence
+                    example.tags_sequence
                 )
             ):
                 sub_tokens = tokenizer.tokenize(token)
@@ -318,75 +293,10 @@ class BertForMultitaskLearning(BertPreTrainedModel):
                 if sequence_mode == 'all':
                     raise NotImplementedError
                 elif sequence_mode == 'not-all':
-                    # if context_mode == 'center' and (i > example.sent_end or i < example.sent_start):
-                    #     if i == example.subj_start:
-                    #         out_of_context_subj = True
-                    #     offset -= 1
-                    #     continue
-                    # if context_mode == 'left' and i > example.sent_end:
-                    #     if i == example.subj_start:
-                    #         out_of_context_subj = True
-                    #     offset -= 1
-                    #     continue
-                    # if context_mode == 'right' and i < example.sent_start:
-                    #     if i == example.subj_start:
-                    #         out_of_context_subj = True
-                    #     offset -= 1
-                    #     continue
-
-                    # if i == example.sent_start:
-                    #     update_example_data(
-                    #         token=[SENTENCE_START],
-                    #         tags_sequence_label=[neg_tags_sequence_label],
-                    #         relations_sequence_label=[
-                    #             neg_relations_sequence_label
-                    #         ],
-                    #         mask=[1],
-                    #         offset_step=1,
-                    #         token_valid_pos_id=[offset + i],
-                    #         orig_position=[]
-                    #     )
-                    # if i == example.subj_start:
-                    #     update_example_data(
-                    #         token=[SUBJECT_START],
-                    #         tags_sequence_label=[neg_tags_sequence_label],
-                    #         relations_sequence_label=[
-                    #             neg_relations_sequence_label
-                    #         ],
-                    #         mask=[1],
-                    #         offset_step=1,
-                    #         token_valid_pos_id=[offset + i],
-                    #         orig_position=[]
-                    #     )
                     if offset + i < max_seq_length:
                         orig_positions_map.append(offset + i)
                     token_valid_pos_ids += [offset + i] * num_sub_tokens
                     tags_sequence_labels.append(tags_sequence_label)
-                    relations_sequence_labels.append(relations_sequence_label)
-                    # if i == example.subj_end:
-                    #     update_example_data(
-                    #         token=[SUBJECT_END],
-                    #         tags_sequence_label=[neg_tags_sequence_label],
-                    #         relations_sequence_label=[
-                    #             neg_relations_sequence_label
-                    #         ],
-                    #         mask=[1],
-                    #         offset_step=1,
-                    #         token_valid_pos_id=[offset + i + 1],
-                    #         orig_position=[]
-                    #     )
-                    # if i == example.sent_end:
-                    #     update_example_data(
-                    #         token=[SENTENCE_END],
-                    #         tags_sequence_label=[neg_tags_sequence_label],
-                    #         relations_sequence_label=[
-                    #             neg_relations_sequence_label
-                    #         ],
-                    #         mask=[1],
-                    #         offset_step=1,
-                    #         token_valid_pos_id=[offset + i + 1],
-                    #         orig_position=[]
-                    #     )
                 else:
                     raise ValueError(
                         f'sequence_mode: expected either all or not-all'
@@ -406,14 +316,11 @@ class BertForMultitaskLearning(BertPreTrainedModel):
                 token_valid_pos_ids = token_valid_pos_ids[:max_seq_length - 1]
                 tags_sequence_labels = \
                     tags_sequence_labels[:max_seq_length - 1]
-                relations_sequence_labels = \
-                    relations_sequence_labels[:max_seq_length - 1]
             else:
                 num_fit_examples += 1
 
             tokens.append(sep_token)
             tags_sequence_labels.append(neg_tags_sequence_label)
-            relations_sequence_labels.append(neg_relations_sequence_label)
             token_valid_pos_ids.append(token_valid_pos_ids[-1] + 1)
             attention_mask.append(1)
 
@@ -438,25 +345,16 @@ class BertForMultitaskLearning(BertPreTrainedModel):
                 tags_sequence_ids += [0] * \
                     (max_seq_length - len(tags_sequence_ids))
 
-                relations_sequence_ids = [
-                    label2id['relations_sequence'][lab]
-                    for lab in relations_sequence_labels
-                ]
-                relations_sequence_ids += [0] * \
-                    (max_seq_length - len(relations_sequence_ids))
 
             except KeyError:
                 msg_task_1 = " ".join(label2id["sent_type"].keys())
                 msg_task_2 = " ".join(label2id["tags_sequence"].keys())
-                msg_task_3 = " ".join(label2id["relations_sequence"].keys())
 
                 err_message = '\n\n'.join([
                     f'sent_type: {example.sent_type}',
                     f'label2id[sent_type]: {msg_task_1}',
                     f'tags_sequence: {" ".join(tags_sequence_labels)}',
                     f'label2id[tags_sequence]: {msg_task_2}',
-                    f'relations_sequence: {" ".join(relations_sequence_labels)}',
-                    f'label2id[relations_sequence]: {msg_task_3}'
                 ])
                 raise KeyError(err_message)
 
@@ -464,7 +362,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
             assert len(input_mask) == max_seq_length
             assert len(segment_ids) == max_seq_length
             assert len(tags_sequence_ids) == max_seq_length
-            assert len(relations_sequence_ids) == max_seq_length
             assert len(token_valid_pos_ids) == max_seq_length
 
 
@@ -475,7 +372,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
                     segment_ids=segment_ids,
                     sent_type_id=sent_type_id,
                     tags_sequence_ids=tags_sequence_ids,
-                    relations_sequence_ids=relations_sequence_ids,
                     orig_positions_map=orig_positions_map,
                     token_valid_pos_ids=token_valid_pos_ids
                 )

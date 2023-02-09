@@ -19,35 +19,15 @@ class InputExample(object):
 
     def __init__(
         self,
-        # guid: str,
         tokens: list,
         sent_type: str,
         tags_sequence: list,
-        relations_sequence: list,
         tags_ids: list,
-        # sent_start: int,
-        # sent_end: int,
-        # subj_start: int,
-        # subj_end: int,
-        # start_char: int,
-        # end_char: int,
-        # source: str,
-        # infile_offsets: list
     ):
-        # self.guid = guid
         self.tokens = tokens
         self.sent_type = sent_type
         self.tags_sequence = tags_sequence
-        self.relations_sequence = relations_sequence
         self.tags_ids = tags_ids
-        # self.sent_start = sent_start
-        # self.sent_end = sent_end
-        # self.subj_start = subj_start
-        # self.subj_end = subj_end
-        # self.start_char = start_char
-        # self.end_char = end_char
-        # self.source = source
-        # self.infile_offsets = infile_offsets
 
 
 class DataProcessor(object):
@@ -84,11 +64,8 @@ class DataProcessor(object):
                 if do_filter:
                     new_data = []
                     for example in data:
-                        if 'tokens' not in example.keys():
-                            example['tokens'] = word_tokenize(example[text_column_title])
+                        example['tokens'] = word_tokenize(example[text_column_title])
                         token_count = len(example['tokens'])
-                        if 'relations_sequence' not in example.keys():
-                            example['relations_sequence'] = ["0"] * token_count
                         if 'tags_ids' not in example.keys():
                             example['tags_ids'] = ["-1"] * token_count
                         if 'tags_sequence' not in example.keys():
@@ -187,20 +164,10 @@ class DataProcessor(object):
         for example in dataset:
             examples.append(
                 InputExample(
-                    # guid=f"{set_type}-{example['idx']}",
                     tokens=example["tokens"],
                     sent_type=example["sent_type"],
                     tags_sequence=example["tags_sequence"],
-                    relations_sequence=example["relations_sequence"],
                     tags_ids=example["tags_ids"],
-                    # sent_start=example["sent_start"],
-                    # sent_end=example["sent_end"],
-                    # subj_start=example["subj_start"],
-                    # subj_end=example["subj_end"],
-                    # start_char=example["start_char"],
-                    # end_char=example["end_char"],
-                    # source=example["source"],
-                    # infile_offsets=example["infile_offsets"]
                 )
             )
         return examples
@@ -230,22 +197,18 @@ def get_dataloader_and_tensors(
         [f.tags_sequence_ids for f in features],
         dtype=torch.long
     )
-    relations_sequence_labels_ids = torch.tensor(
-        [f.relations_sequence_ids for f in features],
-        dtype=torch.long
-    )
     token_valid_pos_ids = torch.tensor(
         [f.token_valid_pos_ids for f in features],
         dtype=torch.long
     )
     eval_data = TensorDataset(
         input_ids, input_mask, segment_ids,
-        sent_type_labels_ids, tags_sequence_labels_ids, relations_sequence_labels_ids, token_valid_pos_ids
+        sent_type_labels_ids, tags_sequence_labels_ids, token_valid_pos_ids
     )
 
     dataloader = DataLoader(eval_data, batch_size=batch_size)
 
-    return dataloader, sent_type_labels_ids, tags_sequence_labels_ids, relations_sequence_labels_ids
+    return dataloader, sent_type_labels_ids, tags_sequence_labels_ids
 
 tokenizers = {
     "bert-large-uncased": BertTokenizer,

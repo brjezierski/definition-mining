@@ -67,7 +67,7 @@ def display_tagged_sent(sent, tags):
   for word, tag in zip(sent, tags):
     tag = remove_order_tag(tag)
     if tag == "Definition":
-      tagged_sent.append(cstr(word, color=bcolors.Blue))
+      tagged_sent.append(cstr(word, color=bcolors.Yellow))
     elif tag == "Secondary-Definition":
       tagged_sent.append(cstr(word, color=bcolors.LightBlue))
     elif tag == "Ordered-Definition":
@@ -83,9 +83,9 @@ def display_tagged_sent(sent, tags):
     elif tag == "Qualifier":
       tagged_sent.append(cstr(word, color=bcolors.Green))
     elif tag == "O":
-      tagged_sent.append(cstr(word, color=bcolors.Default))
+      tagged_sent.append(cstr(word, color=bcolors.Black))
     else:
-      tagged_sent.append(cstr(word, color=bcolors.Default))
+      tagged_sent.append(cstr(word, color=bcolors.Black))
   return " ".join(tagged_sent)
 
 

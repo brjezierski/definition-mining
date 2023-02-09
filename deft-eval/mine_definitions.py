@@ -1,12 +1,10 @@
 import argparse
 import logging
-import os
 
 import numpy as np
 import pandas as pd
 import torch
 from scipy.special import softmax
-
 from tqdm import tqdm
 from models.examples_to_features import (
     get_dataloader_and_tensors,
@@ -44,7 +42,7 @@ def evaluate(
 
         input_ids, input_mask, segment_ids, \
             sent_type_labels_ids, tags_sequence_labels_ids, \
-            relations_sequence_labels_ids, token_valid_pos_ids = batch
+            token_valid_pos_ids = batch
 
         with torch.no_grad():
             outputs, _ = model(
@@ -53,7 +51,6 @@ def evaluate(
                 attention_mask=input_mask,
                 sent_type_labels=sent_type_labels_ids,
                 tags_sequence_labels=tags_sequence_labels_ids,
-                relations_sequence_labels=relations_sequence_labels_ids,
                 token_valid_pos_ids=token_valid_pos_ids,
                 device=device
             )
@@ -83,11 +80,21 @@ def evaluate(
 def main(args):
     if (args.language == "de"):
         model_name = "deepset/gbert-large"
-        model_dir = "training/de-gbert"
-    else:
-    # elif (args.language == "en"):
+        model_dir = "brjezierski/def_mining_de"
+    elif (args.language == "de-local"):
+        model_name = "deepset/gbert-large"
+        model_dir = "training/de-gbert_4e"
+    elif (args.language == "en"):
         model_name = "bert-large-uncased"
-        model_dir = "training/en"
+        model_dir = "brjezierski/def_mining_en"
+    elif (args.language == "en-local"):
+        model_name = "bert-large-uncased"
+        model_dir = "training/en-bert_6e"
+    else:
+        print("Language not supported")
+        exit()
+    if args.model_dir:
+        model_dir = args.model_dir
 
     device = torch.device(
         "cuda" if torch.cuda.is_available() and not args.no_cuda else ("mps" if torch.has_mps else "cpu"))
@@ -106,7 +113,6 @@ def main(args):
 
     sent_type_labels_list = ['0', '1']
     tags_sequence_labels_list = processor.get_hardcoded_sequence_labels(args.language, sequence_type='tags_sequence')
-    relations_sequence_labels_list = processor.get_hardcoded_sequence_labels(args.language, sequence_type='relations_sequence')
 
     label2id = {
         'sent_type': {
@@ -114,9 +120,6 @@ def main(args):
         },
         'tags_sequence': {
             label: i for i, label in enumerate(tags_sequence_labels_list, 1)
-        },
-        'relations_sequence': {
-            label: i for i, label in enumerate(relations_sequence_labels_list, 1)
         }
      }
 
@@ -126,15 +129,11 @@ def main(args):
         },
         'tags_sequence': {
             i: label for i, label in enumerate(tags_sequence_labels_list, 1)
-        },
-        'relations_sequence': {
-            i: label for i, label in enumerate(relations_sequence_labels_list, 1)
         }
     }
 
     num_sent_type_labels = 2
     num_tags_sequence_labels = len(tags_sequence_labels_list) + 1
-    num_relations_sequence_labels = len(relations_sequence_labels_list) + 1
 
     do_lower_case = 'uncased' in model_name
     tokenizer = tokenizers[model_name].from_pretrained(
@@ -145,7 +144,6 @@ def main(args):
             model_dir,
             num_sent_type_labels=num_sent_type_labels,
             num_tags_sequence_labels=num_tags_sequence_labels,
-            num_relations_sequence_labels=num_relations_sequence_labels,
             pooling_type=args.subtokens_pooling_type
         )
 
@@ -160,12 +158,12 @@ def main(args):
     logger.info("  Num examples = %d", len(test_examples))
     logger.info("  Batch size = %d", args.eval_batch_size)
     
-    test_dataloader, _, _, _ = get_dataloader_and_tensors(test_features, args.eval_batch_size)
+    test_dataloader, _, _ = get_dataloader_and_tensors(test_features, args.eval_batch_size)
 
     preds, scores = evaluate(model, device, test_dataloader)
     dest_file = 'labeled_' + args.input_file.split('/')[-1].replace('.json', '')
     write_predictions(
-            model_dir, test_new_examples, test_features,
+            test_new_examples, test_features,
             preds, scores, dest_file,
             label2id=label2id, id2label=id2label
         )
@@ -173,7 +171,7 @@ def main(args):
 
 
 def write_predictions(
-    model_dir, examples, features, preds,
+    examples, features, preds,
     scores, dest_file, label2id, id2label, metrics=None
 ):
     aggregated_results = {}
@@ -228,26 +226,13 @@ def write_predictions(
     }
 
     prediction_results = pd.DataFrame(prediction_results)
+    output_file = f"output/{dest_file}.tsv"
 
-    print(f"Saving {model_dir}/{dest_file}.tsv")
+    print(f"Saving {output_file}")
 
     prediction_results.to_csv(
-        os.path.join(
-            model_dir,
-            f"{dest_file}.tsv"),
-        sep='\t', index=False
+        output_file, sep='\t', index=False
     )
-
-    if metrics is not None:
-        with open(
-            os.path.join(
-                model_dir,
-                f"{dest_file}_eval_results.txt"
-            ), "w"
-        ) as f:
-            for key in sorted(metrics.keys()):
-                f.write("%s = %s\n" % (key, str(metrics[key])))
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -257,8 +242,6 @@ if __name__ == "__main__":
                         help="Whether not to use CUDA when available")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
-    parser.add_argument("--label_tags", action="store_true",
-                        help="label words with tags in the input data")
     parser.add_argument("--subtokens_pooling_type", type=str, default="first",
                         help="pooling mode in bert-ner, one of avg or first")
     parser.add_argument("--max_seq_length", default=256, type=int,
@@ -274,6 +257,8 @@ if __name__ == "__main__":
                         help="Total batch size for eval.")
     parser.add_argument("--text_column", default="text", type=str,
                         help="The title of the column with text.")
+    parser.add_argument("--model_dir", type=str,
+                        help="The directory with the model.")
 
     parsed_args = parser.parse_args()
     main(parsed_args)
