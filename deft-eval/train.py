@@ -313,35 +313,40 @@ def main(args):
     num_sent_type_labels = len(sent_type_labels_list)
     num_tags_sequence_labels = len(tags_sequence_labels_list) + 1
 
-    do_lower_case = 'uncased' in args.model
-    if args.model == 'brjezierski/def_mining_de':
+    if args.language == 'de':
+        model_name = "deepset/gbert-large"
+    elif args.language == 'en':
+        model_name = "bert-large-uncased"
+    else:
+        raise ValueError(args.language)
+
+    do_lower_case = 'uncased' in model_name
+    if args.language == 'de':
         tokenizer = AutoTokenizer.from_pretrained(
             "deepset/gbert-large", use_fast=False)
     else:
-        tokenizer = tokenizers[args.model].from_pretrained(
-            args.model, do_lower_case=do_lower_case
+        tokenizer = tokenizers[model_name].from_pretrained(
+            model_name, do_lower_case=do_lower_case
         )
 
-    model_name = args.model
-
-    if model_name == "brjezierski/def_mining_de":
+    if args.language == 'de':
         config = AutoConfig.from_pretrained("deepset/gbert-large")
     else:
-        config = configs[args.model]
+        config = configs[model_name]
         config = config.from_pretrained(
-            args.model,
+            model_name,
             hidden_dropout_prob=args.dropout
         )
-    if model_name == "brjezierski/def_mining_de":
+    if args.language == 'de':
         model = GBertForMultitaskLearning.from_pretrained(
-            "brjezierski/def_mining_de",
+            args.checkpoint_dir if args.checkpoint_dir else model_name,
             num_sent_type_labels=num_sent_type_labels,
             num_tags_sequence_labels=num_tags_sequence_labels,
             pooling_type="first",
             use_auth_token=True)
     else:
         model = models[model_name].from_pretrained(
-            args.checkpoint_dir if args.checkpoint_dir else args.model,
+            args.checkpoint_dir if args.checkpoint_dir else model_name,
             cache_dir=str(PYTORCH_PRETRAINED_BERT_CACHE),
             num_sent_type_labels=num_sent_type_labels,
             num_tags_sequence_labels=num_tags_sequence_labels,
@@ -362,7 +367,7 @@ def main(args):
     eval_examples = processor.get_dev_examples(args.data_dir)
     eval_features, eval_new_examples = model.convert_examples_to_features(
         eval_examples, label2id, args.max_seq_length,
-        tokenizer, logger, args.sequence_mode, context_mode=args.context_mode
+        tokenizer, logger, context_mode=args.context_mode
     )
     logger.info("***** Dev *****")
     logger.info("  Num examples = %d", len(eval_examples))
@@ -379,7 +384,7 @@ def main(args):
 
     test_features, test_new_examples = model.convert_examples_to_features(
         test_examples, label2id, args.max_seq_length,
-        tokenizer, logger, args.sequence_mode, context_mode=args.context_mode
+        tokenizer, logger, context_mode=args.context_mode
     )
     logger.info("***** Test *****")
     logger.info("  Num examples = %d", len(test_examples))
@@ -392,7 +397,7 @@ def main(args):
     train_examples = processor.get_train_examples(args.data_dir)
     train_features, _ = model.convert_examples_to_features(
         train_examples, label2id,
-        args.max_seq_length, tokenizer, logger, args.sequence_mode,
+        args.max_seq_length, tokenizer, logger,
         context_mode=args.context_mode
     )
 
@@ -762,8 +767,7 @@ def write_predictions(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--test_file", default='', type=str, required=False)
-    parser.add_argument(
-        "--model", default='bert-large-uncased', type=str, required=True)
+    parser.add_argument("--language", default='en', type=str, required=True)
     parser.add_argument("--data_dir", default='data', type=str, required=True,
                         help="The input data dir. Should contain the .json files for the task.")
     parser.add_argument("--output_dir", default=None, type=str, required=True,
@@ -828,9 +832,6 @@ if __name__ == "__main__":
 
     parser.add_argument("--subtokens_pooling_type", type=str, default="first",
                         help="pooling mode in bert-ner, one of avg or first")
-    parser.add_argument("--sequence_mode", type=str, default="not-all",
-                        help="train to predict for all subtokens or not"
-                        "all or not-all")
     parser.add_argument("--context_mode", type=str, default="full",
                         help="context for task 1: one from center, full, left, right")
     parser.add_argument("--lr_schedule", type=str, default="linear_warmup",

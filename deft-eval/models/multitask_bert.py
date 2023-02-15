@@ -15,10 +15,10 @@ SUBJECT_END = '⁄'
 class InputFeatures(object):
 
     def __init__(
-            self, input_ids, input_mask, segment_ids,
-            sent_type_id, tags_sequence_ids,
-            orig_positions_map, token_valid_pos_ids=None
-        ):
+        self, input_ids, input_mask, segment_ids,
+        sent_type_id, tags_sequence_ids,
+        orig_positions_map, token_valid_pos_ids=None
+    ):
         self.input_ids = input_ids
         self.input_mask = input_mask
         self.segment_ids = segment_ids
@@ -31,15 +31,15 @@ class InputFeatures(object):
 class BertForMultitaskLearning(BertPreTrainedModel):
 
     def __init__(
-            self,
-            config: BertTokenizer,
-            num_tags_sequence_labels: int,
-            num_sent_type_labels: int = 2,
-            sent_type_clf_weight: float = 1.0,
-            tags_sequence_clf_weight: float = 1.0,
-            relations_sequence_clf_weight: float = 1.0,
-            pooling_type: str = 'first'
-        ):
+        self,
+        config: BertTokenizer,
+        num_tags_sequence_labels: int,
+        num_sent_type_labels: int = 2,
+        sent_type_clf_weight: float = 1.0,
+        tags_sequence_clf_weight: float = 1.0,
+        relations_sequence_clf_weight: float = 1.0,
+        pooling_type: str = 'first'
+    ):
         super().__init__(config)
 
         self.sent_type_clf_weight = sent_type_clf_weight
@@ -70,19 +70,19 @@ class BertForMultitaskLearning(BertPreTrainedModel):
         self.init_weights()
 
     def forward(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            token_type_ids=None,
-            position_ids=None,
-            head_mask=None,
-            inputs_embeds=None,
-            sent_type_labels=None,
-            tags_sequence_labels=None,
-            token_valid_pos_ids=None,
-            device=torch.device('cuda'),
-            return_outputs=True
-        ):
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        sent_type_labels=None,
+        tags_sequence_labels=None,
+        token_valid_pos_ids=None,
+        device=torch.device('cuda'),
+        return_outputs=True
+    ):
         """
         :param input_ids: bert's input_ids
         :param attention_mask: bert's attention_mask
@@ -132,7 +132,7 @@ class BertForMultitaskLearning(BertPreTrainedModel):
                     -1, self.num_sent_type_labels
                 ),
                 sent_type_labels.view(-1)
-            )
+        )
 
         loss_fct = CrossEntropyLoss(ignore_index=0)
         active_labels = tags_sequence_labels.view(-1)
@@ -155,15 +155,15 @@ class BertForMultitaskLearning(BertPreTrainedModel):
         return outputs
 
     def pool_sequence_outputs(
-            self,
-            sequence_output,
-            token_valid_pos_ids,
-            device
-        ):
+        self,
+        sequence_output,
+        token_valid_pos_ids,
+        device
+    ):
         batch_size, max_len, feat_dim = sequence_output.shape
         valid_sequence_output = torch.zeros(
-                batch_size, max_len, feat_dim,
-                dtype=torch.float32, device=device
+            batch_size, max_len, feat_dim,
+            dtype=torch.float32, device=device
         )
         if self.pooling_type == 'first':
             for i in range(batch_size):
@@ -233,10 +233,8 @@ class BertForMultitaskLearning(BertPreTrainedModel):
     def convert_examples_to_features(
             self, examples, label2id,
             max_seq_length, tokenizer, logger,
-            sequence_mode: str = 'not-all',
             context_mode: str = 'full'
     ):
-        assert sequence_mode in ['all', 'not-all']
         num_tokens = 0
         num_fit_examples = 0
         features = []
@@ -246,7 +244,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
         cls_token = "[CLS]"
 
         accepted_examples = []
-
 
         def update_example_data(
             token=[], tags_sequence_label=[],
@@ -268,10 +265,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
                 logger.info(
                     "Writing example %d of %d" % (ex_index, len(examples))
                 )
-            # len(tokens) == len(attention_mask) ==
-            # == len(token_valid_pos_ids) >= 
-            # >= len([tags|relations]_sequence_labels) >=
-            # >= len(orig_positions_map)
 
             tokens = [cls_token]
             tags_sequence_labels = [neg_tags_sequence_label]
@@ -290,18 +283,10 @@ class BertForMultitaskLearning(BertPreTrainedModel):
             ):
                 sub_tokens = tokenizer.tokenize(token)
                 num_sub_tokens = len(sub_tokens)
-                if sequence_mode == 'all':
-                    raise NotImplementedError
-                elif sequence_mode == 'not-all':
-                    if offset + i < max_seq_length:
-                        orig_positions_map.append(offset + i)
-                    token_valid_pos_ids += [offset + i] * num_sub_tokens
-                    tags_sequence_labels.append(tags_sequence_label)
-                else:
-                    raise ValueError(
-                        f'sequence_mode: expected either all or not-all'
-                    )
-
+                if offset + i < max_seq_length:
+                    orig_positions_map.append(offset + i)
+                token_valid_pos_ids += [offset + i] * num_sub_tokens
+                tags_sequence_labels.append(tags_sequence_label)
                 tokens += sub_tokens
                 attention_mask += [1] * num_sub_tokens
 
@@ -345,7 +330,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
                 tags_sequence_ids += [0] * \
                     (max_seq_length - len(tags_sequence_ids))
 
-
             except KeyError:
                 msg_task_1 = " ".join(label2id["sent_type"].keys())
                 msg_task_2 = " ".join(label2id["tags_sequence"].keys())
@@ -363,7 +347,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
             assert len(segment_ids) == max_seq_length
             assert len(tags_sequence_ids) == max_seq_length
             assert len(token_valid_pos_ids) == max_seq_length
-
 
             features.append(
                 InputFeatures(
@@ -384,6 +367,6 @@ class BertForMultitaskLearning(BertPreTrainedModel):
                 num_fit_examples,
                 num_fit_examples * 100.0 / len(examples),
                 max_seq_length
-        ))
+            ))
 
         return features, accepted_examples

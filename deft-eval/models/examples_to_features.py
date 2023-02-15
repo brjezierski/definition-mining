@@ -1,12 +1,8 @@
-from transformers import XLNetTokenizer
 from transformers import BertConfig, BertTokenizer
-from transformers import RobertaConfig, AutoTokenizer, AutoConfig
-from transformers import RobertaTokenizer
+from transformers import AutoTokenizer, AutoConfig
 from torch.utils.data import DataLoader, TensorDataset
 from .multitask_gbert import GBertForMultitaskLearning
 from .multitask_bert import BertForMultitaskLearning
-from .multitask_roberta import RobertaForMultitaskLearning
-from .multitask_xlnet import XLNetForMultiLearning
 from transformers import XLNetConfig
 import torch
 import os
@@ -54,7 +50,7 @@ class DataProcessor(object):
                     data = new_data
 
         return data
-    
+
     def _read_test_json(self, input_file, text_column_title='text'):
         with open(input_file, "r", encoding='utf-8') as reader:
             data = json.load(reader)
@@ -64,7 +60,8 @@ class DataProcessor(object):
                 if do_filter:
                     new_data = []
                     for example in data:
-                        example['tokens'] = word_tokenize(example[text_column_title])
+                        example['tokens'] = word_tokenize(
+                            example[text_column_title])
                         token_count = len(example['tokens'])
                         if 'tags_ids' not in example.keys():
                             example['tags_ids'] = ["-1"] * token_count
@@ -109,7 +106,8 @@ class DataProcessor(object):
             logger.info(f"sent_type: {len(counter)} labels")
         for label, counter in counter.most_common():
             if logger is not None:
-                logger.info("%s: %.2f%%" % (label, counter * 100.0 / len(dataset)))
+                logger.info("%s: %.2f%%" %
+                            (label, counter * 100.0 / len(dataset)))
             if label not in labels:
                 labels.append(label)
         return labels
@@ -131,9 +129,10 @@ class DataProcessor(object):
         self,
         data_dir: str,
         sequence_type: str = 'tags_sequence',
-        logger = None
+        logger=None
     ):
-        tags_sequence_labels_list = ['O', 'B-Definition', 'I-Definition', 'B-Term', 'I-Term', 'B-Alias-Term', 'I-Alias-Term', 'B-Secondary-Definition', 'I-Secondary-Definition', 'B-Ordered-Term', 'I-Ordered-Term', 'B-Ordered-Definition', 'I-Ordered-Definition', 'B-Referential-Definition', 'I-Referential-Definition', 'B-Qualifier', 'I-Qualifier', 'B-Referential-Term', 'B-Definition-frag', 'I-Definition-frag', 'I-Referential-Term', 'B-Term-frag', 'B-Alias-Term-frag', 'I-Term-frag']
+        tags_sequence_labels_list = ['O', 'B-Definition', 'I-Definition', 'B-Term', 'I-Term', 'B-Alias-Term', 'I-Alias-Term', 'B-Secondary-Definition', 'I-Secondary-Definition', 'B-Ordered-Term', 'I-Ordered-Term', 'B-Ordered-Definition',
+                                     'I-Ordered-Definition', 'B-Referential-Definition', 'I-Referential-Definition', 'B-Qualifier', 'I-Qualifier', 'B-Referential-Term', 'B-Definition-frag', 'I-Definition-frag', 'I-Referential-Term', 'B-Term-frag', 'B-Alias-Term-frag', 'I-Term-frag']
         dataset = self._read_json(
             os.path.join(data_dir, "train.json")
         )
@@ -150,14 +149,14 @@ class DataProcessor(object):
 
         for label, counter in counter.most_common():
             if logger is not None:
-                logger.info("%s: %.2f%%" % (label, counter * 100.0 / denominator))
+                logger.info("%s: %.2f%%" %
+                            (label, counter * 100.0 / denominator))
             if label not in labels:
                 labels.append(label)
         for tag in tags_sequence_labels_list:
             if tag not in labels:
                 labels.append(tag)
         return labels
-
 
     def create_examples(self, dataset, set_type):
         examples = []
@@ -210,24 +209,18 @@ def get_dataloader_and_tensors(
 
     return dataloader, sent_type_labels_ids, tags_sequence_labels_ids
 
+
 tokenizers = {
     "bert-large-uncased": BertTokenizer,
-    "xlnet-large-cased": XLNetTokenizer,
-    "roberta-large": RobertaTokenizer,
     "deepset/gbert-large": AutoTokenizer.from_pretrained("deepset/gbert-large", use_fast=False)
 }
 
 models = {
     "bert-large-uncased": BertForMultitaskLearning,
-    "roberta-large": RobertaForMultitaskLearning,
-    "xlnet-large-cased": XLNetForMultiLearning,
     "deepset/gbert-large": GBertForMultitaskLearning
 }
 
 configs = {
     "bert-large-uncased": BertConfig,
-    "roberta-large": RobertaConfig,
-    "xlnet-large-cased": XLNetConfig,
     "deepset/gbert-large": AutoConfig.from_pretrained("deepset/gbert-large"),
-    "brjezierski/def_mining_de": AutoConfig.from_pretrained("deepset/gbert-large")
 }
