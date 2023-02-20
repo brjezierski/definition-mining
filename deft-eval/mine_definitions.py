@@ -22,18 +22,18 @@ eval_logger = logging.getLogger("__scores__")
 
 
 def evaluate(
-        model, device, eval_dataloader,
-        skip_every_n_examples=1
-    ):
+    model, device, eval_dataloader,
+    skip_every_n_examples=1
+):
     model.eval()
 
     nb_eval_steps = 0
     preds = defaultdict(list)
 
     for batch_id, batch in enumerate(tqdm(
-            eval_dataloader, total=len(eval_dataloader),
-            desc='validation ... '
-        )):
+        eval_dataloader, total=len(eval_dataloader),
+        desc='validation ... '
+    )):
 
         if skip_every_n_examples != 1 and (batch_id + 1) % skip_every_n_examples != 1:
             continue
@@ -81,15 +81,9 @@ def main(args):
     if (args.language == "de"):
         model_name = "deepset/gbert-large"
         model_dir = "brjezierski/def_mining_de"
-    elif (args.language == "de-local"):
-        model_name = "deepset/gbert-large"
-        model_dir = "training/de-gbert_4e"
     elif (args.language == "en"):
         model_name = "bert-large-uncased"
         model_dir = "brjezierski/def_mining_en"
-    elif (args.language == "en-local"):
-        model_name = "bert-large-uncased"
-        model_dir = "training/en-bert_6e"
     else:
         print("Language not supported")
         exit()
@@ -112,7 +106,8 @@ def main(args):
     )
 
     sent_type_labels_list = ['0', '1']
-    tags_sequence_labels_list = processor.get_hardcoded_sequence_labels(args.language, sequence_type='tags_sequence')
+    tags_sequence_labels_list = processor.get_hardcoded_sequence_labels(
+        args.language, sequence_type='tags_sequence')
 
     label2id = {
         'sent_type': {
@@ -121,7 +116,7 @@ def main(args):
         'tags_sequence': {
             label: i for i, label in enumerate(tags_sequence_labels_list, 1)
         }
-     }
+    }
 
     id2label = {
         'sent_type': {
@@ -139,35 +134,37 @@ def main(args):
     tokenizer = tokenizers[model_name].from_pretrained(
         model_name, do_lower_case=do_lower_case
     )
-    
+
     model = models[model_name].from_pretrained(
-            model_dir,
-            num_sent_type_labels=num_sent_type_labels,
-            num_tags_sequence_labels=num_tags_sequence_labels,
-            pooling_type=args.subtokens_pooling_type
-        )
+        model_dir,
+        num_sent_type_labels=num_sent_type_labels,
+        num_tags_sequence_labels=num_tags_sequence_labels,
+        pooling_type=args.subtokens_pooling_type
+    )
 
     model.to(device)
-    
-    test_examples = processor.get_test_examples(args.input_file, args.text_column)
+
+    test_examples = processor.get_test_examples(
+        args.input_file, args.text_column)
     test_features, test_new_examples = model.convert_examples_to_features(
-                test_examples, label2id, args.max_seq_length,
-                tokenizer, logger, args.sequence_mode, context_mode=args.context_mode
-            )
+        test_examples, label2id, args.max_seq_length,
+        tokenizer, logger, args.sequence_mode, context_mode=args.context_mode
+    )
 
     logger.info("  Num examples = %d", len(test_examples))
     logger.info("  Batch size = %d", args.eval_batch_size)
-    
-    test_dataloader, _, _ = get_dataloader_and_tensors(test_features, args.eval_batch_size)
+
+    test_dataloader, _, _ = get_dataloader_and_tensors(
+        test_features, args.eval_batch_size)
 
     preds, scores = evaluate(model, device, test_dataloader)
-    dest_file = 'labeled_' + args.input_file.split('/')[-1].replace('.json', '')
+    dest_file = 'labeled_' + \
+        args.input_file.split('/')[-1].replace('.json', '')
     write_predictions(
-            test_new_examples, test_features,
-            preds, scores, dest_file,
-            label2id=label2id, id2label=id2label
-        )
-
+        test_new_examples, test_features,
+        preds, scores, dest_file,
+        label2id=label2id, id2label=id2label
+    )
 
 
 def write_predictions(
@@ -181,7 +178,7 @@ def write_predictions(
     }
     for task in ['tags_sequence']:
         aggregated_results[task] = [
-            list(pred[orig_positions]) + \
+            list(pred[orig_positions]) +
             [
                 label2id[task][neg_label_mapper[task]]
             ] * (len(ex.tokens) - len(orig_positions))
@@ -193,7 +190,7 @@ def write_predictions(
         ]
 
         aggregated_results[f'{task}_scores'] = [
-            list(score[orig_positions]) + \
+            list(score[orig_positions]) +
             [0.999] * (len(ex.tokens) - len(orig_positions))
             for score, orig_positions, ex in zip(
                 scores[task],
@@ -204,7 +201,7 @@ def write_predictions(
 
     prediction_results = {
         'tokens': [
-             ' '.join(ex.tokens) for ex in examples
+            ' '.join(ex.tokens) for ex in examples
         ],
         'sent_type_pred': [
             id2label['sent_type'][x] for x in preds['sent_type']
@@ -213,7 +210,8 @@ def write_predictions(
             str(score) for score in scores['sent_type']
         ],
         'tags_sequence_pred': [
-            ' '.join([id2label['tags_sequence'][x] if x != 0 else 'O' for x in sent])
+            ' '.join([id2label['tags_sequence'][x]
+                     if x != 0 else 'O' for x in sent])
             for sent in aggregated_results['tags_sequence']
         ],
         'tags_sequence_scores': [
@@ -233,6 +231,7 @@ def write_predictions(
     prediction_results.to_csv(
         output_file, sep='\t', index=False
     )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

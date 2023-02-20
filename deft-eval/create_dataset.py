@@ -313,7 +313,7 @@ def read_task_2(
     return result
 
 
-def load_de_translation(corpus, translation_dir):
+def load_de_translation(corpus, create_dataset):
     translation_corpus_dir = f'{translation_dir}/{corpus}.tsv'
     dataset = pd.read_csv(translation_corpus_dir,
                           on_bad_lines='skip', sep='\t')
@@ -349,7 +349,7 @@ def create_dataset(corpus, target_dir, translation_dir, deft_corpus_repo: str = 
         dataset_en["relations_sequence"] = dataset_en.apply(
             lambda row: assign_zero_relations(row['tags_sequence']), axis=1)
         dataset_en = dataset_en.drop_duplicates(subset=['tokens'])
-        dataset_en['Text'] = dataset_en['tokens'].apply(' '.join)
+        dataset_en['text'] = dataset_en['tokens'].apply(' '.join)
         dataset_en = dataset_en.drop(
             ['source', 'start_char', 'end_char', 'infile_offsets'], axis=1)
         return dataset_en

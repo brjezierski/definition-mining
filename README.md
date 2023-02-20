@@ -47,16 +47,21 @@ import transformers
 spacy download de_dep_news_trf
 ```
 
+# Models
 
-## Best scores
+For English, a multitask large uncased BERT model was used to predict whether a phrase contains a definition and to predict the tag for each word within the definition. For German, a GBERT model published by deepset was used. Trained models can be found on huggingface for both [English](https://huggingface.co/brjezierski/def_mining_en) and [German](https://huggingface.co/brjezierski/def_mining_de).
+
+## Best F1 scores
+
+The models were trained for 6 epochs. For the last two epochs only the tag sequence loss was used to further improve the performace for the tag labeling task.
 
 |                     | EN     | DE     |
 |---------------------|--------|--------|
-| type sent 1 F1      | 0.79   | 0.77   |
-| tag weighted avg F1 | 0.70   | 0.66   |
+| type sent 1         | 0.79   | 0.77   |
+| tag weighted avg    | 0.70   | 0.66   |
 
 
-## Tags
+# Tags
 B- prefix for the first term and I- for all subsequent terms.  
 
 * Term - a primary term
@@ -78,24 +83,21 @@ Before running any script, remember to activate the environment dm_env.
 The following script is used to create a dataset that can be used for training from the format of DeftEval corpus provided for SemEval 2020. [The DeftEval repository](https://github.com/Elzawawy/DeftEval) need to be clones into the definition-mining directory before running the script. The following command creates an English dataset ready for training 
 
 ```
-python create_dataset.py --target_dir data/single/en --lang en --sent_aggregation single
+python create_dataset.py --target_dir data/single/en --lang en --sent_aggregation single --translation_dir ../data/de
 ```
 
-In order to create a German dataset a list of translations 
-## Training 
+In order to create a German dataset a list of translations is needed in the tsv format with columns named Text and Translation. Three files called train, test and dev are required to be in the same directory which can be passed using the `translation_dir` flag. The dataset for training of the definition mining model can include each sentence as a separate training example (`--sent_aggregation single`), group sentences into training examples of three sentences each in order to increase the accuracy of detecting definitions spanning over one sentence (`--sent_aggregation window`) or both (`--sent_aggregation both`). The script can be easily modified to any data augmentation task in which sentences with each word labeled with a different tag need to be translated together with the tags into another language. For the training of our models we used single sentence aggregation.
 
-### Input format
-The input file should be in the JSON fromat with a sentence per row. Each sentence should not be longer than 256 characters.
+## Training the model
 
-### Commands
 The description of input flags can be found using a help command. The hyperparameter values were chosen based on the results of experiments by Davletov et al. 2020. 
 
-Training from scratch saved in training/de-gbert_4e while only optimizing for the tags sequence loss.
+Below are the examples of commands we used training. The following is for training an English model for 2 epochs from a pre-trained BERT model.
 ```
 python train.py --language en \
                 --data_dir data/single/en \
                 --num_train_epochs 2 \
-                --eval_per_epoch 400 \
+                --eval_per_epoch 4 \
                 --max_seq_length 256 \
                 --do_train --do_validate \
                 --train_mode random_sorted \
@@ -112,11 +114,10 @@ python train.py --language en \
                 --dropout 0.1 \
                 --tags_sequence_clf_weight 1 \
                 --sent_type_clf_weight 1 \
-                --output_dir training/de-gbert_6e-0-1 \
-                --checkpoint_dir training/de-gbert_4e
+                --output_dir training/en-2e \
 ```
 
-Training from the checkpoint saved in training/de-gbert_4e while only optimizing for the tags sequence loss.
+And the following is used for training from the checkpoint saved in training/de-gbert_4e while only optimizing for the tags sequence loss.
 ```
 python train.py --model de \
                 --data_dir data/single/de \
@@ -143,14 +144,24 @@ python train.py --model de \
                 --checkpoint_dir training/de-gbert_4e
 ```
 
-## Show definitions from the example German corpus
-```
-python display_tagged_sentences.py --input_file output/labeled_phrases.tsv --show_only_def
-```
-To analyze the results as compared to searching for definitions by looking for a specific substring (e.g. ist), include a flag `-substr ist`.
+## Extract definitions
+The input file should be in the JSON format with a phrase per row in a column whose title is passed to the `--text_column` flag. The mostt relevant flags are displayed in the example below. The two languages supported are `de` and `en` which use the models available in our huggingface repo. Instead, a local directory with the model called `pytorch_model.bin` can be passed as an argument to the flag `--model_dir`. More flags are avilable with the help command. They overlap with some of the flags of the training script. The output file can be found in the labeled_data directory.
 
-
-## Label a dataset
 ```
 python mine_definitions.py --input_file ../data/de/kurier_phrases.json --language de --text_column phrase
+```
+
+## Show definitions from the example German corpus
+To display color coded reaults of using a definition extraction model use `display_tagged_sentences.py` script with a flag `--show_only_def`. To analyze the results as compared to searching for definitions by looking for a specific substring (e.g. ist), include a flag `-substr ist`.
+
+```
+python display_tagged_sentences.py --input_file labeled_phrases/kurier_phrases.tsv --show_only_def
+```
+
+## Push the model to huggingface
+
+An example command:
+
+```
+python upload_model_to_huggingface.py --language de --username brjezierski --model_name def_mining_de --commit_msg "Trained on 6 epochs" --model_dir training/de-gbert_6e
 ```

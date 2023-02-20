@@ -615,7 +615,7 @@ def main(args):
 
                         output_model_file = os.path.join(
                             args.output_dir,
-                            f"best_{eval_metric}_{WEIGHTS_NAME}"
+                            f"{WEIGHTS_NAME}"
                         )
                         save_model(
                             args, model, tokenizer, output_model_file
