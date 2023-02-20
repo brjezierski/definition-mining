@@ -160,7 +160,7 @@ python display_tagged_sentences.py --input_file labeled_phrases/kurier_phrases.t
 
 ## Push the model to huggingface
 
-An example command:
+Before running the script, it may be necesssary to [configure the repository for huggingface](https://huggingface.co/docs/transformers/model_sharing#setup). An example command:
 
 ```
 python upload_model_to_huggingface.py --language de --username brjezierski --model_name def_mining_de --commit_msg "Trained on 6 epochs" --model_dir training/de-gbert_6e
