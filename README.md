@@ -53,7 +53,7 @@ For English, a multitask large uncased BERT model was used to predict whether a 
 
 ## Best F1 scores
 
-The models were trained for 6 epochs. For the last two epochs only the tag sequence loss was used to further improve the performace for the tag labeling task.
+The models were trained for 6 epochs. For the last two epochs only the tag sequence loss was used to further improve the performance for the tag labeling task.
 
 |                     | EN     | DE     |
 |---------------------|--------|--------|
@@ -80,7 +80,7 @@ Before running any script, remember to activate the environment dm_env.
 
 ## Creating a dataset 
 
-The following script is used to create a dataset that can be used for training from the format of DeftEval corpus provided for SemEval 2020. [The DeftEval repository](https://github.com/Elzawawy/DeftEval) need to be clones into the definition-mining directory before running the script. The following command creates an English dataset ready for training 
+The following script is used to create a dataset that can be used for training from the format of DeftEval corpus provided for SemEval 2020. [The DeftEval repository](https://github.com/Elzawawy/DeftEval) need to be cloned into the definition-mining directory before running the script. The following command creates an English dataset ready for training 
 
 ```
 python create_dataset.py --target_dir data/single/en --lang en --sent_aggregation single --translation_dir ../data/de
@@ -92,7 +92,7 @@ In order to create a German dataset a list of translations is needed in the tsv 
 
 The description of input flags can be found using a help command. The hyperparameter values were chosen based on the results of experiments by Davletov et al. 2020. 
 
-Below are the examples of commands we used training. The following is for training an English model for 2 epochs from a pre-trained BERT model.
+Below are the examples of commands we used for training. The following is for training an English model for 2 epochs from a pre-trained BERT model.
 ```
 python train.py --language en \
                 --data_dir data/single/en \
@@ -145,7 +145,7 @@ python train.py --model de \
 ```
 
 ## Extract definitions
-The input file should be in the JSON format with a phrase per row in a column whose title is passed to the `--text_column` flag. The mostt relevant flags are displayed in the example below. The two languages supported are `de` and `en` which use the models available in our huggingface repo. Instead, a local directory with the model called `pytorch_model.bin` can be passed as an argument to the flag `--model_dir`. More flags are avilable with the help command. They overlap with some of the flags of the training script. The output file can be found in the labeled_data directory.
+The input file should be in the JSON format with a phrase per row in a column whose title is passed to the `--text_column` flag. The most relevant flags are displayed in the example below. The two languages supported are `de` and `en` which use the models available in our huggingface repo. Instead, a local directory with the model called `pytorch_model.bin` can be passed as an argument to the flag `--model_dir`. More flags are avilable with the help command. They overlap with some of the flags of the training script. The output file can be found in the labeled_data directory.
 
 ```
 python mine_definitions.py --input_file ../data/de/kurier_phrases.json --language de --text_column phrase
