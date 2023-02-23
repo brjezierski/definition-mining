@@ -42,7 +42,13 @@ torch.has_mps # should be True
 import transformers
 ```
 
-8. To use spacy for German, first install the following package
+8. To use nltk open python and run the following
+```
+import nltk
+nltk.download(‘punkt’)
+```
+
+9. To use spacy for German, first install the following package
 ```
 spacy download de_dep_news_trf
 ```
