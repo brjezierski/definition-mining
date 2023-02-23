@@ -120,12 +120,12 @@ python train.py --language en \
                 --dropout 0.1 \
                 --tags_sequence_clf_weight 1 \
                 --sent_type_clf_weight 1 \
-                --output_dir training/en-2e \
+                --output_dir training/en-2e
 ```
 
 And the following is used for training from the checkpoint saved in training/de-gbert_4e while only optimizing for the tags sequence loss.
 ```
-python train.py --model de \
+python train.py --language de \
                 --data_dir data/single/de \
                 --num_train_epochs 2 \
                 --eval_per_epoch 4 \
@@ -138,7 +138,6 @@ python train.py --model de \
                 --warmup_proportion 0.1 \
                 --gradient_accumulation_steps 8 \
                 --subtokens_pooling_type first \
-                --sequence_mode not-all \
                 --lr_schedule linear_warmup \
                 --seed 42 \
                 --learning_rate 1e-5 \
