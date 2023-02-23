@@ -148,7 +148,7 @@ def main(args):
         args.input_file, args.text_column)
     test_features, test_new_examples = model.convert_examples_to_features(
         test_examples, label2id, args.max_seq_length,
-        tokenizer, logger, args.sequence_mode, context_mode=args.context_mode
+        tokenizer, logger, args.sequence_mode
     )
 
     logger.info("  Num examples = %d", len(test_examples))
