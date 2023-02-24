@@ -45,7 +45,7 @@ import transformers
 8. To use nltk open python and run the following
 ```
 import nltk
-nltk.download(‘punkt’)
+nltk.download('punkt')
 ```
 
 9. To use spacy for German, first install the following package
