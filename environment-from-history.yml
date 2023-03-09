@@ -1,0 +1,17 @@
+name: dm_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - tokenizers=0.11.1
+  - transformers
+  - scikit-learn
+  - future==0.18.2
+  - fire=0.2.1
+  - pandas
+  - tensorboard
+  - sentencepiece
+  - nltk
+  - spacy
+  - networkx
+prefix: /Users/bartekjezierski/miniforge3/envs/dm_env

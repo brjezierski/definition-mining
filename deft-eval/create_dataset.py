@@ -214,20 +214,19 @@ def read_task_2(
     num_columns = None
 
     for file in sorted(os.listdir(data_dir)):
-        if file.startswith('task_2'):
-            with open(os.path.join(data_dir, file)) as fp:
-                file_lines = [line.strip() for line in fp.readlines()]
+        with open(os.path.join(data_dir, file)) as fp:
+            file_lines = [line.strip() for line in fp.readlines()]
 
-            infile_offset = 0
-            if num_columns is None:
-                num_columns = len(file_lines[0].split(sep))
+        infile_offset = 0
+        if num_columns is None:
+            num_columns = len(file_lines[0].split(sep))
 
-            for is_sep, lines in groupby(file_lines, key=lambda line: line == ''):
-                lines = list(lines)
-                if not is_sep:
-                    sentences[file].append(
-                        (lines, [i + infile_offset for i in range(len(lines))]))
-                infile_offset += len(lines)
+        for is_sep, lines in groupby(file_lines, key=lambda line: line == ''):
+            lines = list(lines)
+            if not is_sep:
+                sentences[file].append(
+                    (lines, [i + infile_offset for i in range(len(lines))]))
+            infile_offset += len(lines)
 
     all_sentences = \
         [
@@ -313,7 +312,7 @@ def read_task_2(
     return result
 
 
-def load_de_translation(corpus, create_dataset):
+def load_de_translation(corpus, translation_dir):
     translation_corpus_dir = f'{translation_dir}/{corpus}.tsv'
     dataset = pd.read_csv(translation_corpus_dir,
                           on_bad_lines='skip', sep='\t')
@@ -324,8 +323,11 @@ def load_de_translation(corpus, create_dataset):
     return dataset
 
 
-def create_dataset(corpus, target_dir, translation_dir, deft_corpus_repo: str = 'deft_corpus', lang="bilingual"):
-    task_2_dir = f'../{deft_corpus_repo}/local_data/task_2/{corpus}'
+def create_dataset(corpus, translation_dir, target_dir, deft_corpus_repo: str = 'deft_corpus', lang="bilingual"):
+    if corpus in ['train', 'dev']:
+        task_2_dir = f'../{deft_corpus_repo}/data/deft_files/{corpus}'
+    else:
+        task_2_dir = f'../{deft_corpus_repo}/data/test_files/labeled/subtask_2/'
     part = read_task_2(
         data_dir=task_2_dir
     )
@@ -341,6 +343,7 @@ def create_dataset(corpus, target_dir, translation_dir, deft_corpus_repo: str = 
             del part[column]
 
     dataset_en = pd.DataFrame(part)
+    print('columns', dataset_en.columns)
     if lang == "en":
         dataset_en = dataset_en.rename(
             columns={"tag": "tags_sequence"}, errors="raise")
@@ -443,8 +446,6 @@ if __name__ == '__main__':
     nltk.download('punkt')
     myaligner = SentenceAligner(
         model="bert", token_type="bpe", matching_methods="mai")
-    spacy.require_gpu()
-    # os.system("spacy download de_dep_news_trf")
     nlp = spacy.load('de_dep_news_trf')
 
     parser = argparse.ArgumentParser()

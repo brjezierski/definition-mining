@@ -6,7 +6,7 @@ This repository contains scripts for training a definition extraction model as w
 
 Data used for the training came from the [Task 6 of SemEval-2020 conference](https://aclanthology.org/2020.semeval-1.41.pdf). The training set contains 24,184 sentences, the validation set 1,179 sentences, and testing set 1,189. Each sentence is labeled with a binary label (sent_type) indicating whether it contains a definition or not as well as a sequence of tags (one tag per word) indicating which words are part of a definition and in which capacity. The overview of the tags can be found below.
 
-# Environment setup for M1 Macs
+# Environment pre-setup for M1 Macs
 
 1. Make sure to mark "Open using Rosetta" in Get info of Terminal in Applications.
 
@@ -24,25 +24,27 @@ sh ~/Downloads/Miniforge3-MacOSX-arm64.sh
 source ~/miniforge3/bin/activate
 ```
 
-5. ```cd``` into the definition-mining repo and run
+# Environment setup
+
+1. ```cd``` into the definition-mining repo and run
 ```
-conda env create -f environment.yml
+conda env create -f environment-from-history.yml
 conda activate dm_env
 ```
 
-6. Install PyTorch using pip
-```
-pip3 install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cpu
-```
-
-7. Verify PyTorch and transformers installation. Open a Python interpreter and type 
+2. Verify PyTorch and transformers installation. Open a Python interpreter and type 
 ```
 import torch
 torch.has_mps # should be True
 import transformers
 ```
 
-8. To use nltk open python and run the following
+3. If PyTorch was not detected, install it with the following command and verify the installations again
+```
+pip3 install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+```
+
+8. To use nltk open Python and run the following
 ```
 import nltk
 nltk.download('punkt')
@@ -86,10 +88,12 @@ Before running any script, remember to activate the environment dm_env.
 
 ## Creating a dataset 
 
-The following script is used to create a dataset that can be used for training from the format of DeftEval corpus provided for SemEval 2020. [The DeftEval repository](https://github.com/Elzawawy/DeftEval) need to be cloned into the definition-mining directory before running the script. The following command creates an English dataset ready for training 
+The following script is used to create a dataset that can be used for training from the format of DeftEval corpus provided for SemEval 2020. [The DeftEval repository](https://github.com/adobe-research/deft_corpus.git) need to be cloned into the definition-mining directory before running the script. The following commands create English and German datasets ready for training 
 
 ```
-python create_dataset.py --target_dir data/single/en --lang en --sent_aggregation single --translation_dir ../data/de
+cd deft-eval
+python create_dataset.py --target_dir data/single/en --lang en --sent_aggregation single
+python create_dataset.py --target_dir data/single/de --lang de --sent_aggregation single --translation_dir ../data/de
 ```
 
 In order to create a German dataset a list of translations is needed in the tsv format with columns named Text and Translation. Three files called train, test and dev are required to be in the same directory which can be passed using the `translation_dir` flag. The dataset for training of the definition mining model can include each sentence as a separate training example (`--sent_aggregation single`), group sentences into training examples of three sentences each in order to increase the accuracy of detecting definitions spanning over one sentence (`--sent_aggregation window`) or both (`--sent_aggregation both`). The script can be easily modified to any data augmentation task in which sentences with each word labeled with a different tag need to be translated together with the tags into another language. For the training of our models we used single sentence aggregation.
@@ -122,8 +126,7 @@ python train.py --language en \
                 --sent_type_clf_weight 1 \
                 --output_dir training/en-2e
 ```
-
-And the following is used for training from the checkpoint saved in training/de-gbert_4e while only optimizing for the tags sequence loss.
+And the following is used for training from the checkpoint supposing a trained model is saved in training/de-gbert_4e while only optimizing for the tags sequence loss.
 ```
 python train.py --language de \
                 --data_dir data/single/de \
@@ -160,7 +163,7 @@ python mine_definitions.py --input_file ../data/de/kurier_phrases.json --languag
 To display color coded reaults of using a definition extraction model use `display_tagged_sentences.py` script with a flag `--show_only_def`. To analyze the results as compared to searching for definitions by looking for a specific substring (e.g. ist), include a flag `-substr ist`.
 
 ```
-python display_tagged_sentences.py --input_file labeled_phrases/kurier_phrases.tsv --show_only_def
+python display_tagged_sentences.py --input_file labeled_data/kurier_phrases.tsv --show_only_def
 ```
 
 ## Push the model to huggingface
