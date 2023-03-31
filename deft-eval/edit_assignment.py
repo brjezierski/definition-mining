@@ -1,3 +1,4 @@
+import spacy
 import streamlit as st
 import pandas as pd
 import base64
@@ -46,6 +47,69 @@ def colorize_text(sentence, tags_sequence_pred):
     return colored_sentence
 
 
+# Load the Spacy English model
+nlp = spacy.load("en_core_web_sm")
+
+# Define a function to perform named entity recognition and mark the corresponding tags as "Term"
+
+
+def get_word_indices(sentence, start, end):
+    words = sentence.split()
+    word_indices = []
+    for i, word in enumerate(words):
+        word_start = sentence.find(word)
+        word_end = word_start + len(word)
+        if start <= word_start and end >= word_end:
+            word_indices.append(i)
+    return word_indices
+
+
+def tag_named_entities(sentence, tags_sequence_pred, sent_type):
+    # Use Spacy to perform named entity recognition
+    if (sent_type == 1):
+        doc = nlp(sentence)
+
+        # Extract the named entities and their positions in the sentence
+        named_entities = [(ent.text, ent.start_char, ent.end_char,
+                           ent.label_) for ent in doc.ents]
+
+        # Convert the tags sequence to a list
+        tags = tags_sequence_pred.split()
+
+        # Mark the corresponding tags as "Term" for each named entity
+        for entity in named_entities:
+            start = entity[1]
+            end = entity[2]
+            for i in get_word_indices(sentence, start, end):
+                tags[i] = "Term"
+
+        # Convert the list of tags back to a string and return it
+        return " ".join(tags)
+    else:
+        return tags_sequence_pred
+
+
+def prepend_tags(tags):
+    tags = tags.split()
+    updated_tags = []
+    prev_tag = ""
+    for tag in tags:
+        if "Term" in tag:
+            if "Term" not in prev_tag:
+                updated_tags.append("B-Term")
+            else:
+                updated_tags.append("I-Term")
+        elif "Definition" in tag:
+            if "Definition" not in prev_tag:
+                updated_tags.append("B-Definition")
+            else:
+                updated_tags.append("I-Definition")
+        else:
+            updated_tags.append(tag)
+        prev_tag = tag
+    return " ".join(updated_tags)
+
+
 def main():
     st.set_page_config(page_title="Tag Editor", page_icon=":pencil2:")
 
@@ -55,6 +119,15 @@ def main():
     if uploaded_file is not None:
         # Read the file into a DataFrame
         df = pd.read_csv(uploaded_file, sep="\t")
+        df = df.sort_values(
+            by=["sent_type_pred", "sent_type_scores"], ascending=[False, True])
+
+        # Apply the tagging function to each row of the DataFrame
+        df["tags_sequence_pred"] = df.apply(lambda row: tag_named_entities(
+            row["tokens"], row["tags_sequence_pred"], row["sent_type_pred"]), axis=1)
+
+        df["tags_sequence_pred"] = df.apply(
+            lambda row: prepend_tags(row["tags_sequence_pred"]), axis=1)
 
         # Colorize the sentences based on their tags
         df["colored_tokens"] = df.apply(lambda row: colorize_text(
